@@ -15,8 +15,6 @@ CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
-#file_id_usuarios = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
-
 def buscar_arquivo(service, nome_arquivo):
     query = f"name='{nome_arquivo}'"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
@@ -24,6 +22,8 @@ def buscar_arquivo(service, nome_arquivo):
     if items:
         return items[0]['id']
     return None
+
+file_id_usuarios = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
 
 if file_id_usuarios:
     baixar_json(service, file_id_usuarios, CAMINHO_USUARIOS_LOCAL)
