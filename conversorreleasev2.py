@@ -10,6 +10,8 @@ from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 PASTA_ID = "1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj"
+NOME_USUARIOS_DRIVE = "usuarios.json"
+CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
