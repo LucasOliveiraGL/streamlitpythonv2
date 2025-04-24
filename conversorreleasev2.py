@@ -2,10 +2,10 @@ import streamlit as st
 import json
 from pathlib import Path
 import pandas as pd
-from google.oauth2 import service_account # type: ignore
-from googleapiclient.discovery import build # type: ignore
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 import io
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload # type: ignore
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
 NOME_ARQUIVO_DRIVE = "embalagens.json"
