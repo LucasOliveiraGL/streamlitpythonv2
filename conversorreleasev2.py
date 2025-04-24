@@ -15,6 +15,14 @@ CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
+file_id_usuarios = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
+
+if file_id_usuarios:
+    baixar_json(service, file_id_usuarios, CAMINHO_USUARIOS_LOCAL)
+else:
+    st.error("Arquivo usuarios.json não encontrado no Google Drive.")
+    st.stop()
+    
 # Carregar usuários
 def carregar_usuarios():
     with open("usuarios.json", "r", encoding="utf-8") as f:
