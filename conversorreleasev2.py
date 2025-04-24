@@ -1,19 +1,22 @@
 import streamlit as st
 import json
 from pathlib import Path
-import pandas as pd
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import io
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+from googleapiclient.http import MediaIoBaseDownload
 
-CAMINHO_JSON_LOCAL = Path("embalagens.json")
-NOME_ARQUIVO_DRIVE = "embalagens.json"
-PASTA_ID = "1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj"
+# Configurações
 NOME_USUARIOS_DRIVE = "usuarios.json"
 CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-SCOPES = ['https://www.googleapis.com/auth/drive']
+# Conexão com Google Drive
+def conectar_drive():
+    service_account_info = st.secrets["gdrive"]
+    creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+    service = build('drive', 'v3', credentials=creds)
+    return service
 
 def buscar_arquivo(service, nome_arquivo):
     query = f"name='{nome_arquivo}'"
@@ -23,54 +26,56 @@ def buscar_arquivo(service, nome_arquivo):
         return items[0]['id']
     return None
 
+def baixar_json(service, file_id, destino_local):
+    request = service.files().get_media(fileId=file_id)
+    fh = io.FileIO(destino_local, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+
+# Carregar usuários
+def carregar_usuarios():
+    if CAMINHO_USUARIOS_LOCAL.exists():
+        with open(CAMINHO_USUARIOS_LOCAL, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+# ====== INÍCIO ======
+service = conectar_drive()
 file_id_usuarios = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
 
 if file_id_usuarios:
     baixar_json(service, file_id_usuarios, CAMINHO_USUARIOS_LOCAL)
 else:
-    st.error("Arquivo usuarios.json não encontrado no Google Drive.")
+    st.error("Arquivo de usuários não encontrado no Google Drive.")
     st.stop()
-    
-# Carregar usuários
-def carregar_usuarios():
-    with open(CAMINHO_USUARIOS_LOCAL, "r", encoding="utf-8") as f:
-        return json.load(f)
 
 usuarios = carregar_usuarios()
 
-# Função de autenticação
-def autenticar(usuario_input, senha_input):
-    for user in usuarios:
-        if user["usuario"] == usuario_input and user["senha"] == senha_input:
-            return user["nome"]
-    return None
-
 # Controle de sessão
-if "logado" not in st.session_state:
-    st.session_state.logado = False
-    st.session_state.nome_usuario = ""
+if "usuario_logado" not in st.session_state:
+    st.session_state.usuario_logado = None
 
-if not st.session_state.logado:
-    st.title("🔐 Login - Conversor de Embalagens")
-    usuario_input = st.text_input("Usuário")
+# Tela de Login
+if not st.session_state.usuario_logado:
+    st.title("🔒 Login - Conversor de Embalagens")
+
+    user_input = st.text_input("Usuário")
     senha_input = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        nome = autenticar(usuario_input, senha_input)
-        if nome:
-            st.session_state.logado = True
-            st.session_state.nome_usuario = nome
-            st.success(f"Bem-vindo, {nome}!")
+        usuario_encontrado = next((u for u in usuarios if u["usuario"] == user_input and u["senha"] == senha_input), None)
+        if usuario_encontrado:
+            st.session_state.usuario_logado = usuario_encontrado["nome"]
+            st.success(f"Bem-vindo, {usuario_encontrado['nome']}!")
             st.experimental_rerun()
         else:
             st.error("Usuário ou senha inválidos.")
     st.stop()
 
-# Após login bem-sucedido, segue o app:
-st.sidebar.success(f"👤 {st.session_state.nome_usuario}")
-if st.sidebar.button("Logout"):
-    st.session_state.logado = False
-    st.experimental_rerun()
+# Após login
+st.sidebar.markdown(f"👤 Logado como: **{st.session_state.usuario_logado}**")
 
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
