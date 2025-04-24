@@ -25,7 +25,7 @@ else:
     
 # Carregar usuários
 def carregar_usuarios():
-    with open("usuarios.json", "r", encoding="utf-8") as f:
+    with open(CAMINHO_USUARIOS_LOCAL, "r", encoding="utf-8") as f:
         return json.load(f)
 
 usuarios = carregar_usuarios()
