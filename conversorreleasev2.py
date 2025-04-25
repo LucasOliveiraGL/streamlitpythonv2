@@ -10,7 +10,7 @@ from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 # =========================
 # CONFIGURAÇÕES GERAIS
 # =========================
-ID_USUARIOS_DRIVE = "1Xy3R_XqKKbJI2h9dL6A1NV5kUbP7kh_K"
+ID_USUARIOS_DRIVE = "1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj"
 ID_EMBALAGENS_DRIVE = "1rMDq1rv-K-ON2CJ9pmv3QNlUPsqdCq47"
 CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
 CAMINHO_EMBALAGENS_LOCAL = Path("embalagens.json")
