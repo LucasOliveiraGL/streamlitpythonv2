@@ -6,76 +6,72 @@ from googleapiclient.discovery import build
 import io
 from googleapiclient.http import MediaIoBaseDownload
 
-# Configurações
+# ==== CONFIGURAÇÕES
 NOME_USUARIOS_DRIVE = "usuarios.json"
-CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
+CAMINHO_LOCAL = Path("usuarios.json")
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-# Conexão com Google Drive
+# ==== CONEXÃO GOOGLE DRIVE
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
     creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-    service = build('drive', 'v3', credentials=creds)
-    return service
+    return build('drive', 'v3', credentials=creds)
 
 def buscar_arquivo(service, nome_arquivo):
     query = f"name='{nome_arquivo}'"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
     items = results.get('files', [])
-    if items:
-        return items[0]['id']
-    return None
+    return items[0]['id'] if items else None
 
 def baixar_json(service, file_id, destino_local):
     request = service.files().get_media(fileId=file_id)
-    fh = io.FileIO(destino_local, 'wb')
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while not done:
-        status, done = downloader.next_chunk()
+    with io.FileIO(destino_local, 'wb') as fh:
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
 
-# Carregar usuários
-def carregar_usuarios():
-    if CAMINHO_USUARIOS_LOCAL.exists():
-        with open(CAMINHO_USUARIOS_LOCAL, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+# ==== AUTENTICAÇÃO
+def autenticar(usuario, senha, lista_usuarios):
+    for user in lista_usuarios:
+        if user["usuario"] == usuario and user["senha"] == senha:
+            return True
+    return False
 
-# ====== INÍCIO ======
-service = conectar_drive()
-file_id_usuarios = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
+# ==== INÍCIO APP
+st.set_page_config(page_title="Login - Conversor", layout="centered")
 
-if file_id_usuarios:
-    baixar_json(service, file_id_usuarios, CAMINHO_USUARIOS_LOCAL)
-else:
-    st.error("Arquivo de usuários não encontrado no Google Drive.")
-    st.stop()
+if "logado" not in st.session_state:
+    st.session_state.logado = False
 
-usuarios = carregar_usuarios()
+if not st.session_state.logado:
+    st.title("🔐 Login - Conversor de Embalagens")
 
-# Controle de sessão
-if "usuario_logado" not in st.session_state:
-    st.session_state.usuario_logado = None
+    service = conectar_drive()
+    file_id = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
 
-# Tela de Login
-if not st.session_state.usuario_logado:
-    st.title("🔒 Login - Conversor de Embalagens")
+    if not file_id:
+        st.error("Arquivo de usuários não encontrado no Google Drive.")
+        st.stop()
 
-    user_input = st.text_input("Usuário")
-    senha_input = st.text_input("Senha", type="password")
+    baixar_json(service, file_id, CAMINHO_LOCAL)
+
+    with open(CAMINHO_LOCAL, "r", encoding="utf-8") as f:
+        usuarios = json.load(f)
+
+    user = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        usuario_encontrado = next((u for u in usuarios if u["usuario"] == user_input and u["senha"] == senha_input), None)
-        if usuario_encontrado:
-            st.session_state.usuario_logado = usuario_encontrado["nome"]
-            st.success(f"Bem-vindo, {usuario_encontrado['nome']}!")
+        if autenticar(user, senha, usuarios):
+            st.session_state.logado = True
+            st.session_state.usuario = user
             st.experimental_rerun()
         else:
             st.error("Usuário ou senha inválidos.")
-    st.stop()
-
-# Após login
-st.sidebar.markdown(f"👤 Logado como: **{st.session_state.usuario_logado}**")
+else:
+    st.success(f"✅ Bem-vindo, {st.session_state.usuario}!")
+    st.write("Redirecionando para o sistema... (simulação)")
 
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
