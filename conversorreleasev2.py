@@ -50,9 +50,8 @@ if not st.session_state.logado:
     service = conectar_drive()
     file_id = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
 
-    if not file_id:
-        st.error("Arquivo de usuários não encontrado no Google Drive.")
-        st.stop()
+    file_id = "1Xy3R_XqKKbJI2h9dL6A1NV5kUbP7kh_K"
+    baixar_json(service, file_id, CAMINHO_LOCAL)
 
     baixar_json(service, file_id, CAMINHO_LOCAL)
 
