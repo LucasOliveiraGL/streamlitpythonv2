@@ -36,25 +36,6 @@ def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
-service = conectar_drive()
-
-request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
-results = service.files().list(
-    q=query,
-    spaces='drive',
-    fields="files(id, name)",
-    supportsAllDrives=True,
-    includeItemsFromAllDrives=True
-).execute()
-
-results = service.files().list(
-    q=query,
-    spaces='drive',
-    fields="files(id, name)",
-    supportsAllDrives=True,
-    includeItemsFromAllDrives=True
-).execute()
-
 # =========================
 # FUNÇÕES AUXILIARES
 # =========================
@@ -83,7 +64,7 @@ def salvar_embalagens(lista, service):
 st.set_page_config(page_title="Conversor de Embalagens - Login", layout="wide")
 service = conectar_drive()
 
-# Baixar arquivos necessários
+# Baixar arquivos necessários do Drive
 try:
     baixar_json(service, ID_USUARIOS_DRIVE, CAMINHO_USUARIOS_LOCAL)
     baixar_json(service, ID_EMBALAGENS_DRIVE, CAMINHO_EMBALAGENS_LOCAL)
@@ -116,9 +97,8 @@ if not st.session_state.logado:
 # =========================
 # MENU PRINCIPAL
 # =========================
-st.sidebar.image("https://i.imgur.com/YOwQy4V.png", width=200)  # Exemplo de logo hospedada
+st.sidebar.image("https://i.imgur.com/YOwQy4V.png", width=200)
 pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão de Quantidades"])
-
 dados = carregar_embalagens()
 
 # =========================
