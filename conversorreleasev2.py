@@ -47,6 +47,14 @@ results = service.files().list(
     includeItemsFromAllDrives=True
 ).execute()
 
+results = service.files().list(
+    q=query,
+    spaces='drive',
+    fields="files(id, name)",
+    supportsAllDrives=True,
+    includeItemsFromAllDrives=True
+).execute()
+
 # =========================
 # FUNÇÕES AUXILIARES
 # =========================
