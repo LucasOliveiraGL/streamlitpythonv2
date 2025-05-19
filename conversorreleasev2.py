@@ -25,7 +25,7 @@ def conectar_drive():
     return build('drive', 'v3', credentials=creds)
 
 def baixar_json(service, file_id, destino_local):
-    request = service.files().get_media(fileId=file_id)
+    request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
     with io.FileIO(destino_local, 'wb') as fh:
         downloader = MediaIoBaseDownload(fh, request)
         done = False
