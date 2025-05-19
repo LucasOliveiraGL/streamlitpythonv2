@@ -19,6 +19,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 # =========================
 # CONEXÃO GOOGLE DRIVE
 # =========================
+service = conectar_drive()
 
 request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
 results = service.files().list(
