@@ -19,17 +19,6 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 # =========================
 # CONEXÃO GOOGLE DRIVE
 # =========================
-service = conectar_drive()
-
-request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
-results = service.files().list(
-    q=query,
-    spaces='drive',
-    fields="files(id, name)",
-    supportsAllDrives=True,
-    includeItemsFromAllDrives=True
-).execute()
-
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
     creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
@@ -47,7 +36,16 @@ def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
+service = conectar_drive()
 
+request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
+results = service.files().list(
+    q=query,
+    spaces='drive',
+    fields="files(id, name)",
+    supportsAllDrives=True,
+    includeItemsFromAllDrives=True
+).execute()
 
 # =========================
 # FUNÇÕES AUXILIARES
