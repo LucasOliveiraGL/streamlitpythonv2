@@ -74,6 +74,14 @@ except Exception as e:
 
 usuarios = carregar_usuarios()
 
+results = service.files().list(
+    q=query,
+    spaces='drive',
+    fields="files(id, name)",
+    supportsAllDrives=True,
+    includeItemsFromAllDrives=True
+).execute()
+
 # =========================
 # TELA DE LOGIN
 # =========================
