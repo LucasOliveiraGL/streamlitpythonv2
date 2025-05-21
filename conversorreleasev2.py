@@ -1,32 +1,34 @@
 import streamlit as st
 import json
 from pathlib import Path
+import pandas as pd
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import io
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-import pandas as pd
 
-# ========== CONFIGURAÇÕES ==========
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
-PASTA_ID = "1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj"  # ID da pasta no Drive
-NOME_ARQUIVO_DRIVE = "embalagens.json"
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
-NOME_USUARIOS_DRIVE = "usuarios.json"
-CAMINHO_USUARIOS_LOCAL = Path("usuarios.json")
+NOME_ARQUIVO_DRIVE = "embalagens.json"
 
-# ========== CONEXÃO COM GOOGLE DRIVE ==========
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+# Conectar ao Google Drive usando secrets do Streamlit
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
     creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-    return build('drive', 'v3', credentials=creds)
+    service = build('drive', 'v3', credentials=creds)
+    return service
 
+# Buscar ID do arquivo no Drive
 def buscar_arquivo(service, nome_arquivo):
-    query = f"name='{nome_arquivo}' and '{PASTA_ID}' in parents and trashed = false"
+    query = f"name='{nome_arquivo}'"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
     items = results.get('files', [])
-    return items[0]['id'] if items else None
+    if items:
+        return items[0]['id']
+    return None
 
+# Baixar JSON do Drive
 def baixar_json(service, file_id, destino_local):
     request = service.files().get_media(fileId=file_id)
     fh = io.FileIO(destino_local, 'wb')
@@ -35,59 +37,24 @@ def baixar_json(service, file_id, destino_local):
     while not done:
         status, done = downloader.next_chunk()
 
+# Atualizar JSON no Drive
 def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
-# ========== INÍCIO ==========
+# ====== INÍCIO DO APP ======
+
 st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
+
 service = conectar_drive()
-
-# Baixar dados de login
-file_id_usuarios = buscar_arquivo(service, NOME_USUARIOS_DRIVE)
-if file_id_usuarios:
-    baixar_json(service, file_id_usuarios, CAMINHO_USUARIOS_LOCAL)
-else:
-    st.error("Arquivo de usuários não encontrado no Google Drive.")
-    st.stop()
-
-# Baixar dados de embalagens
 file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
+
 if file_id:
     baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
 else:
     st.error("Arquivo embalagens.json não encontrado no Google Drive.")
-    st.markdown("[🔗 Clique aqui para acessar o arquivo manualmente](https://drive.google.com/drive/folders/1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj)")
     st.stop()
 
-# ========== LOGIN ==========
-def carregar_usuarios():
-    if CAMINHO_USUARIOS_LOCAL.exists():
-        with open(CAMINHO_USUARIOS_LOCAL, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-usuarios = carregar_usuarios()
-
-if "usuario_logado" not in st.session_state:
-    st.session_state.usuario_logado = None
-
-if not st.session_state.usuario_logado:
-    st.title("🔒 Login - Conversor de Embalagens")
-    user_input = st.text_input("Usuário")
-    senha_input = st.text_input("Senha", type="password")
-
-    if st.button("Entrar"):
-        usuario_encontrado = next((u for u in usuarios if u["usuario"] == user_input and u["senha"] == senha_input), None)
-        if usuario_encontrado:
-            st.session_state.usuario_logado = usuario_encontrado["nome"]
-            st.success(f"Bem-vindo, {usuario_encontrado['nome']}!")
-            st.experimental_rerun()
-        else:
-            st.error("Usuário ou senha inválidos.")
-    st.stop()
-
-# ========== FUNÇÕES ==========
 def carregar_dados():
     if CAMINHO_JSON_LOCAL.exists():
         with open(CAMINHO_JSON_LOCAL, "r", encoding="utf-8") as f:
@@ -99,8 +66,6 @@ def salvar_dados(lista):
         json.dump(lista, f, indent=4, ensure_ascii=False)
     atualizar_json(service, file_id, CAMINHO_JSON_LOCAL)
 
-# ========== INTERFACE ==========
-st.sidebar.markdown(f"👤 Logado como: **{st.session_state.usuario_logado}**")
 pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão de Quantidades"])
 dados = carregar_dados()
 
@@ -153,7 +118,7 @@ if pagina == "Cadastro de Produto":
     else:
         st.info("Nenhum produto cadastrado.")
 
-elif pagina == "Conversão de Quantidades":
+if pagina == "Conversão de Quantidades":
     st.title("🔁 Conversão de Quantidades")
 
     if not dados:
@@ -189,21 +154,24 @@ elif pagina == "Conversão de Quantidades":
         qtd_dp_por_cx = produto["qtd_displays_caixa"]
         qtd_un_por_dp = produto["qtd_unidades_display"]
 
+        un_por_cx = qtd_dp_por_cx * qtd_un_por_dp
+        un_por_dp = qtd_un_por_dp
+
         if codigo_origem == cod_cx:
-            qtd_caixa = qtd_informada
-            qtd_display = qtd_caixa * qtd_dp_por_cx
-            sobra_un = qtd_display * qtd_un_por_dp
+            total_un = qtd_informada * un_por_cx
         elif codigo_origem == cod_dp:
-            qtd_caixa = 0
-            qtd_display = qtd_informada
-            sobra_un = qtd_display * qtd_un_por_dp
+            total_un = qtd_informada * un_por_dp
         elif codigo_origem == cod_un:
-            qtd_caixa = 0
-            qtd_display = 0
-            sobra_un = qtd_informada
+            total_un = qtd_informada
         else:
             st.error("Código inválido.")
             st.stop()
+
+        qtd_caixa = total_un // un_por_cx
+        restante = total_un % un_por_cx
+
+        qtd_display = restante // un_por_dp
+        sobra_un = restante % un_por_dp
 
         st.success(f"🔹 Conversão de {qtd_informada}x ({codigo_origem}) → {produto['produto']}")
         st.markdown(f"- 📦 **Caixas** ({cod_cx}): `{int(qtd_caixa)}`")
