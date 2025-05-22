@@ -89,6 +89,46 @@ if pagina == "Cadastro de Produto":
             st.success("Produto cadastrado com sucesso!")
             st.rerun()
 
+elif pagina == "📥 Importar Produtos (Planilha)":
+    st.title("📥 Importar Produtos em Massa (XLSX)")
+    
+    st.markdown("Envie uma planilha com os seguintes campos obrigatórios:")
+    st.code("produto, cod_caixa, qtd_displays_caixa, cod_display, qtd_unidades_display, cod_unitario")
+
+    arquivo = st.file_uploader("Selecione o arquivo .xlsx", type=["xlsx", "xls"])
+
+    substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
+
+    #Pagina: Importar cadastro
+    
+    if arquivo and st.button("📤 Importar"):
+        try:
+            df = pd.read_excel(arquivo, dtype=str)
+            obrigatorios = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display", "qtd_unidades_display", "cod_unitario"]
+            if not all(col in df.columns for col in obrigatorios):
+                st.error(f"A planilha deve conter as colunas: {', '.join(obrigatorios)}")
+                st.stop()
+
+            df["produto"] = df["produto"].astype(str).str.strip()
+            df["cod_caixa"] = df["cod_caixa"].astype(str).str.upper()
+            df["cod_display"] = df["cod_display"].astype(str).str.upper()
+            df["cod_unitario"] = df["cod_unitario"].astype(str).str.upper()
+            df["qtd_displays_caixa"] = df["qtd_displays_caixa"].astype(int)
+            df["qtd_unidades_display"] = df["qtd_unidades_display"].astype(int)
+
+            lista_produtos = df.to_dict(orient="records")
+
+            if substituir:
+                dados.clear()
+
+            dados.extend(lista_produtos)
+            salvar_dados(dados)
+            st.success(f"{len(lista_produtos)} produtos importados com sucesso!")
+            st.rerun()
+
+        except Exception as e:
+            st.error(f"Erro ao importar: {e}")
+
     st.divider()
     st.subheader("📋 Produtos Cadastrados")
     if dados:
@@ -108,6 +148,7 @@ if pagina == "Cadastro de Produto":
     else:
         st.info("Nenhum produto cadastrado.")
 
+#Pagina: Conversão
 elif pagina == "Conversão de Quantidades":
     st.title("🔁 Conversão em Massa entre Caixa e Display")
 
