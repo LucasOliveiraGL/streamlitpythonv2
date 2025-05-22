@@ -168,7 +168,7 @@ elif pagina == "Importar Produtos (Planilha)":
 
 # ===== CONVERSÃO MANUAL =====
 elif pagina == "Executar Conversão com Estoque":
-    st.title("🔁 Conversão por Lote com Estoque")
+    st.title("🔁 Conversão por Lote com Estoque (Display ↔ Caixa)")
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
     if not relatorio:
         st.stop()
@@ -176,17 +176,16 @@ elif pagina == "Executar Conversão com Estoque":
     df_estoque = pd.read_excel(relatorio, dtype=str)
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    st.markdown("### 🧾 Informações de Conversão")
-    num_linhas = st.number_input("Número de Conversões", min_value=1, step=1, value=1)
+    num_linhas = st.number_input("Quantas conversões deseja fazer?", min_value=1, value=1, step=1)
     entradas = []
 
+    st.markdown("### 🧾 Informações de Conversão")
     for i in range(num_linhas):
-        st.markdown(f"#### Conversão {i+1}")
         col1, col2, col3 = st.columns(3)
         with col1:
-            cod = st.text_input(f"Código de Origem {i+1}", key=f"cod_{i}").upper()
+            cod = st.text_input(f"Código de Origem {i+1}", key=f"cod_{i}").strip().upper()
         with col2:
-            lote = st.text_input(f"Lote {i+1}", key=f"lote_{i}")
+            lote = st.text_input(f"Lote {i+1}", key=f"lote_{i}").strip()
         with col3:
             qtd = st.number_input(f"Quantidade {i+1}", min_value=1, step=1, key=f"qtd_{i}")
         entradas.append((cod, lote, qtd))
@@ -195,15 +194,15 @@ elif pagina == "Executar Conversão com Estoque":
     itens_entrada = []
     erros = []
 
-    if st.button("Gerar JSONs em Massa"):
+    if st.button("Gerar JSONs"):
         for i, (cod, lote, qtd) in enumerate(entradas):
             produto = next((p for p in dados if cod in [p["cod_caixa"], p["cod_display"]]), None)
             if not produto:
-                erros.append(f"Conversão {i+1}: Código {cod} não encontrado.")
+                erros.append(f"[{i+1}] Código {cod} não cadastrado.")
                 continue
 
             if df_estoque.query(f"`Cód. Merc.` == '{cod}' and `Lote Fabr.` == '{lote}'").empty:
-                erros.append(f"Conversão {i+1}: Lote {lote} para código {cod} não encontrado no estoque.")
+                erros.append(f"[{i+1}] Lote {lote} não encontrado para código {cod}.")
                 continue
 
             qtd_disp_cx = produto["qtd_displays_caixa"]
@@ -232,6 +231,6 @@ elif pagina == "Executar Conversão com Estoque":
             for js in jsons_saida:
                 st.code(json.dumps(js, indent=4), language="json")
 
-            st.subheader("📥 JSON de Entrada")
-            json_entrada = gerar_json_entrada(itens_entrada)
-            st.code(json.dumps(json_entrada, indent=4), language="json")
+            st.subheader("📥 JSON de Entrada Único (Valor total = R$ 1,00)")
+            entrada_final = gerar_json_entrada(itens_entrada)
+            st.code(json.dumps(entrada_final, indent=4), language="json")
