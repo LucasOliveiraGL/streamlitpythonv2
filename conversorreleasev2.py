@@ -11,6 +11,18 @@ CAMINHO_JSON_LOCAL = Path("embalagens.json")
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
+# ====== INÍCIO DO APP ======
+st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
+
+service = conectar_drive()
+file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)  # apenas debug
+
+if file_id:
+    baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
+else:
+    st.error("Arquivo embalagens.json não encontrado no Google Drive.")
+    st.stop()
+
 # Conectar ao Google Drive usando secrets do Streamlit
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
@@ -44,18 +56,6 @@ def baixar_json(service, file_id, destino_local):
 def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
-
-# ====== INÍCIO DO APP ======
-st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
-
-service = conectar_drive()
-file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)  # apenas debug
-
-if file_id:
-    baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
-else:
-    st.error("Arquivo embalagens.json não encontrado no Google Drive.")
-    st.stop()
 
 # ====== FUNÇÕES ======
 def carregar_dados():
