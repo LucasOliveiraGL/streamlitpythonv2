@@ -184,6 +184,7 @@ else:
 dados = carregar_dados()
 
 # ===== PÁGINA DE CONVERSÃO COM ESTOQUE =====
+elif pagina == "Importar Produtos (Planilha)":
 st.title("🔁 Conversão por Lote com Estoque")
 
 relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
