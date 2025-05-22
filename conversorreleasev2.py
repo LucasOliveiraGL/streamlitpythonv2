@@ -8,32 +8,20 @@ import io
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
-PASTA_ID = "1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj"  # Substitua pelo ID real da pasta no seu Drive
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-# Conectar ao Google Drive usando secrets do Streamlit
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
     creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
     return build('drive', 'v3', credentials=creds)
 
-# Buscar ID do arquivo no Drive
 def buscar_arquivo(service, nome_arquivo):
-    query = f"name='{nome_arquivo}' and '{PASTA_ID}' in parents and trashed = false"
+    query = f"name='{nome_arquivo}' and trashed = false"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
     items = results.get('files', [])
-    if items:
-        return items[0]['id']
-    return None
+    return items[0]['id'] if items else None
 
-def buscar_arquivo_debug(service, nome_arquivo):
-    query = f"'{PASTA_ID}' in parents and trashed = false"
-    results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
-    #st.write("📂 Arquivos disponíveis na pasta:", results.get("files", []))
-    return buscar_arquivo(service, nome_arquivo)
-
-# Baixar JSON do Drive
 def baixar_json(service, file_id, destino_local):
     request = service.files().get_media(fileId=file_id)
     fh = io.FileIO(destino_local, 'wb')
@@ -42,34 +30,26 @@ def baixar_json(service, file_id, destino_local):
     while not done:
         status, done = downloader.next_chunk()
 
-# Atualizar JSON no Drive
 def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
-# ====== INÍCIO DO APP ======
 st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
 
-service = conectar_drive()  # 🔧 Correto: conecta antes de buscar
-file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)
+service = conectar_drive()
+file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
 
 if file_id:
     baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
 else:
     st.warning("Arquivo embalagens.json não encontrado. Criando arquivo vazio...")
     with open(CAMINHO_JSON_LOCAL, "w", encoding="utf-8") as f:
-        json.dump([], f, indent=4)
-    
+        json.dump([], f)
+    file_metadata = {"name": NOME_ARQUIVO_DRIVE}
     media = MediaFileUpload(CAMINHO_JSON_LOCAL, mimetype='application/json')
-    novo_arquivo = service.files().create(
-        body={"name": NOME_ARQUIVO_DRIVE, "parents": [PASTA_ID]},
-        media_body=media,
-        fields='id'
-    ).execute()
-    
-    file_id = novo_arquivo['id']
-    st.success("Arquivo embalagens.json criado com sucesso no Google Drive.")
-    
+    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    file_id = file.get("id")
+
 def carregar_dados():
     if CAMINHO_JSON_LOCAL.exists():
         with open(CAMINHO_JSON_LOCAL, "r", encoding="utf-8") as f:
@@ -85,29 +65,24 @@ pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão d
 dados = carregar_dados()
 
 if pagina == "Cadastro de Produto":
-    st.title("📦 Cadastro de Produto (Caixa > Display > Unidade)")
+    st.title("📦 Cadastro de Produto (Display ↔ Caixa)")
 
     with st.form("cadastro_produto"):
         st.subheader("➕ Cadastrar Novo Produto")
         produto = st.text_input("Nome do Produto")
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
             cod_caixa = st.text_input("Código da Caixa")
-            qtd_display_por_caixa = st.number_input("Displays por Caixa", min_value=1, step=1)
         with col2:
             cod_display = st.text_input("Código do Display")
-            qtd_unid_por_display = st.number_input("Unidades por Display", min_value=1, step=1)
-        with col3:
-            cod_unitario = st.text_input("Código Unitário")
+        qtd_display_por_caixa = st.number_input("Displays por Caixa", min_value=1, step=1)
 
         if st.form_submit_button("Salvar Produto"):
             novo = {
                 "produto": produto,
                 "cod_caixa": cod_caixa.strip().upper(),
                 "qtd_displays_caixa": qtd_display_por_caixa,
-                "cod_display": cod_display.strip().upper(),
-                "qtd_unidades_display": qtd_unid_por_display,
-                "cod_unitario": cod_unitario.strip().upper()
+                "cod_display": cod_display.strip().upper()
             }
             dados.append(novo)
             salvar_dados(dados)
@@ -133,28 +108,22 @@ if pagina == "Cadastro de Produto":
     else:
         st.info("Nenhum produto cadastrado.")
 
-if pagina == "Conversão de Quantidades":
-    st.title("🔁 Conversão de Quantidades")
+elif pagina == "Conversão de Quantidades":
+    st.title("🔁 Conversão entre Caixa e Display")
 
     if not dados:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
 
-    opcoes = []
     cod_to_produto = {}
+    codigos = []
 
     for item in dados:
-        opcoes.extend([
-            (item["cod_caixa"], item),
-            (item["cod_display"], item),
-            (item["cod_unitario"], item)
-        ])
+        codigos.extend([item["cod_caixa"], item["cod_display"]])
         cod_to_produto[item["cod_caixa"]] = item
         cod_to_produto[item["cod_display"]] = item
-        cod_to_produto[item["cod_unitario"]] = item
 
-    codigos = list(dict.fromkeys([c[0] for c in opcoes]))
-    codigo_origem = st.selectbox("Código de Origem", codigos)
+    codigo_origem = st.selectbox("Código de Origem", list(dict.fromkeys(codigos)))
     qtd_informada = st.number_input("Quantidade", min_value=1, step=1)
 
     if st.button("Converter"):
@@ -165,30 +134,25 @@ if pagina == "Conversão de Quantidades":
 
         cod_cx = produto["cod_caixa"]
         cod_dp = produto["cod_display"]
-        cod_un = produto["cod_unitario"]
         qtd_dp_por_cx = produto["qtd_displays_caixa"]
-        qtd_un_por_dp = produto["qtd_unidades_display"]
-
-        un_por_cx = qtd_dp_por_cx * qtd_un_por_dp
-        un_por_dp = qtd_un_por_dp
 
         if codigo_origem == cod_cx:
-            total_un = qtd_informada * un_por_cx
+            qtd_caixas = qtd_informada
+            qtd_displays = qtd_caixas * qtd_dp_por_cx
         elif codigo_origem == cod_dp:
-            total_un = qtd_informada * un_por_dp
-        elif codigo_origem == cod_un:
-            total_un = qtd_informada
+            qtd_displays = qtd_informada
+            qtd_caixas = qtd_displays // qtd_dp_por_cx
+            sobra_dp = qtd_displays % qtd_dp_por_cx
         else:
             st.error("Código inválido.")
             st.stop()
 
-        qtd_caixa = total_un // un_por_cx
-        restante = total_un % un_por_cx
-
-        qtd_display = restante // un_por_dp
-        sobra_un = restante % un_por_dp
-
         st.success(f"🔹 Conversão de {qtd_informada}x ({codigo_origem}) → {produto['produto']}")
-        st.markdown(f"- 📦 **Caixas** ({cod_cx}): `{int(qtd_caixa)}`")
-        st.markdown(f"- 📦 **Displays** ({cod_dp}): `{int(qtd_display)}`")
-        st.markdown(f"- 🧃 **Unidades** ({cod_un}): `{int(sobra_un)}`")
+        if codigo_origem == cod_cx:
+            st.markdown(f"- 📦 **Caixas** ({cod_cx}): `{int(qtd_caixas)}`")
+            st.markdown(f"- 📦 **Displays** ({cod_dp}): `{int(qtd_displays)}`")
+        else:
+            st.markdown(f"- 📦 **Displays** ({cod_dp}): `{int(qtd_displays)}`")
+            st.markdown(f"- 📦 **Caixas** ({cod_cx}): `{int(qtd_caixas)}`")
+            if sobra_dp:
+                st.markdown(f"- ⚠️ **Displays avulsos**: `{int(sobra_dp)}`")
