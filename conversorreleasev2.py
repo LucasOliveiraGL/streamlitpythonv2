@@ -87,7 +87,7 @@ def gerar_json_saida(codprod, qtde, vlunit, lote):
                 "CODPROD": codprod,
                 "QTPROD": str(qtde),
                 "VLUNIT": str(vlunit).replace(".", ","),
-                "LOTE": lote
+                "LOTEFAB": lote
             }]
         }
     }
@@ -96,7 +96,7 @@ def gerar_json_entrada(itens):
     return {
         "CORPEM_ERP_DOC_ENT": {
             "CGCCLIWMS": CNPJ_DESTINO,
-            "CGCREM": "37699133000108",
+            "CGCREM": CNPJ_DESTINO,
             "OBSRESDP": "",
             "TPDESTNF": "",
             "DEV": "0",
@@ -106,7 +106,6 @@ def gerar_json_entrada(itens):
             "VLTOTALNF": str(sum([float(i["VLTOTPROD"]) for i in itens])),
             "NUMEPEDCLI": "ENTRADA_CONVERSAO",
             "CHAVENF": gerar_chave_nfe(),
-            "CHAVENF_DEV": "",
             "ITENS": itens
         }
     }
