@@ -56,9 +56,20 @@ file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)
 if file_id:
     baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
 else:
-    st.error("Arquivo embalagens.json não encontrado no Google Drive.")
-    st.stop()
-
+    st.warning("Arquivo embalagens.json não encontrado. Criando arquivo vazio...")
+    with open(CAMINHO_JSON_LOCAL, "w", encoding="utf-8") as f:
+        json.dump([], f, indent=4)
+    
+    media = MediaFileUpload(CAMINHO_JSON_LOCAL, mimetype='application/json')
+    novo_arquivo = service.files().create(
+        body={"name": NOME_ARQUIVO_DRIVE, "parents": [PASTA_ID]},
+        media_body=media,
+        fields='id'
+    ).execute()
+    
+    file_id = novo_arquivo['id']
+    st.success("Arquivo embalagens.json criado com sucesso no Google Drive.")
+    
 def carregar_dados():
     if CAMINHO_JSON_LOCAL.exists():
         with open(CAMINHO_JSON_LOCAL, "r", encoding="utf-8") as f:
