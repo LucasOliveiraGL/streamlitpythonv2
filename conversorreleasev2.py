@@ -187,13 +187,14 @@ dados = carregar_dados()
 if pagina == "Executar Conversão com Estoque":
     st.title("🔁 Conversão por Lote com Estoque")
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
-if not relatorio:
-    st.stop()
+    
+    if not relatorio:
+        st.stop()
 
-df_estoque = pd.read_excel(relatorio, dtype=str)
-df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
+    df_estoque = pd.read_excel(relatorio, dtype=str)
+    df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-st.markdown("### ✏️ Preencha abaixo as conversões")
+    st.markdown("### ✏️ Preencha abaixo as conversões")
 
 dados_iniciais = pd.DataFrame([{
     "cod_caixa": "",
