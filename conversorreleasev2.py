@@ -11,18 +11,6 @@ CAMINHO_JSON_LOCAL = Path("embalagens.json")
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-# ====== INÍCIO DO APP ======
-st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
-
-service = conectar_drive()
-file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)  # apenas debug
-
-if file_id:
-    baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
-else:
-    st.error("Arquivo embalagens.json não encontrado no Google Drive.")
-    st.stop()
-
 # Conectar ao Google Drive usando secrets do Streamlit
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
@@ -34,9 +22,10 @@ def buscar_arquivo(service, nome_arquivo):
     query = f"name='{nome_arquivo}' and trashed = false"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
     items = results.get('files', [])
-    return items[0]['id'] if items else None
+    if items:
+        return items[0]['id']
+    return None
 
-# Versão de debug que mostra todos os arquivos
 def buscar_arquivo_debug(service, nome_arquivo):
     query = "trashed = false"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
@@ -46,18 +35,29 @@ def buscar_arquivo_debug(service, nome_arquivo):
 # Baixar JSON do Drive
 def baixar_json(service, file_id, destino_local):
     request = service.files().get_media(fileId=file_id)
-    with io.FileIO(destino_local, 'wb') as fh:
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
+    fh = io.FileIO(destino_local, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
 
 # Atualizar JSON no Drive
 def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
-# ====== FUNÇÕES ======
+# ====== INÍCIO DO APP ======
+st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
+
+service = conectar_drive()  # 🔧 Correto: conecta antes de buscar
+file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)
+
+if file_id:
+    baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
+else:
+    st.error("Arquivo embalagens.json não encontrado no Google Drive.")
+    st.stop()
+
 def carregar_dados():
     if CAMINHO_JSON_LOCAL.exists():
         with open(CAMINHO_JSON_LOCAL, "r", encoding="utf-8") as f:
@@ -69,7 +69,6 @@ def salvar_dados(lista):
         json.dump(lista, f, indent=4, ensure_ascii=False)
     atualizar_json(service, file_id, CAMINHO_JSON_LOCAL)
 
-# ====== INTERFACE ======
 pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão de Quantidades"])
 dados = carregar_dados()
 
@@ -122,7 +121,7 @@ if pagina == "Cadastro de Produto":
     else:
         st.info("Nenhum produto cadastrado.")
 
-elif pagina == "Conversão de Quantidades":
+if pagina == "Conversão de Quantidades":
     st.title("🔁 Conversão de Quantidades")
 
     if not dados:
