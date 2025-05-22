@@ -168,7 +168,7 @@ elif pagina == "Importar Produtos (Planilha)":
             st.success(f"{len(novos)} produtos importados!")
 
 # ===== CONVERSÃO MANUAL =====
-st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
+#st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
 service = conectar_drive()
 file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
 
