@@ -109,43 +109,81 @@ if pagina == "Cadastro de Produto":
         st.info("Nenhum produto cadastrado.")
 
 elif pagina == "Conversão de Quantidades":
-    st.title("🔁 Conversão entre Caixa e Display")
+    st.title("🔁 Conversão em Massa entre Caixa e Display")
 
     if not dados:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
 
     cod_to_produto = {}
-    codigos = []
-
     for item in dados:
-        codigos.extend([item["cod_caixa"], item["cod_display"]])
         cod_to_produto[item["cod_caixa"]] = item
         cod_to_produto[item["cod_display"]] = item
 
-    codigo_origem = st.selectbox("Código de Origem", list(dict.fromkeys(codigos)))
-    qtd_informada = st.number_input("Quantidade", min_value=1, step=1)
+    st.markdown("### 📋 Entradas")
+    col1, col2 = st.columns(2)
+    with col1:
+        codigos_texto = st.text_area("Códigos (um por linha)")
+    with col2:
+        quantidades_texto = st.text_area("Quantidades (mesma ordem)")
 
-    if st.button("Converter"):
-        produto = cod_to_produto.get(codigo_origem)
-        if not produto:
-            st.error("Código não encontrado.")
+    if st.button("Converter em Massa"):
+        codigos = codigos_texto.strip().splitlines()
+        quantidades = quantidades_texto.strip().splitlines()
+
+        if len(codigos) != len(quantidades):
+            st.error("Número de códigos e quantidades deve ser igual.")
             st.stop()
 
-        cod_cx = produto["cod_caixa"]
-        cod_dp = produto["cod_display"]
-        qtd_dp_por_cx = produto["qtd_displays_caixa"]
+        resultados = []
+        for cod, qtd in zip(codigos, quantidades):
+            cod = cod.strip().upper()
+            try:
+                qtd = int(qtd)
+            except:
+                st.error(f"Quantidade inválida para código {cod}")
+                continue
 
-        if codigo_origem == cod_cx:
-            qtd_caixas = qtd_informada
-            qtd_displays = qtd_caixas * qtd_dp_por_cx
-        elif codigo_origem == cod_dp:
-            qtd_displays = qtd_informada
-            qtd_caixas = qtd_displays // qtd_dp_por_cx
-            sobra_dp = qtd_displays % qtd_dp_por_cx
-        else:
-            st.error("Código inválido.")
-            st.stop()
+            produto = cod_to_produto.get(cod)
+            if not produto:
+                resultados.append({
+                    "Código": cod,
+                    "Produto": "Não encontrado",
+                    "Conversão": "❌"
+                })
+                continue
+
+            cod_cx = produto["cod_caixa"]
+            cod_dp = produto["cod_display"]
+            qtd_dp_por_cx = produto["qtd_displays_caixa"]
+
+            if cod == cod_dp:
+                total_dp = qtd
+                total_cx = total_dp // qtd_dp_por_cx
+                sobra = total_dp % qtd_dp_por_cx
+            elif cod == cod_cx:
+                total_cx = qtd
+                total_dp = total_cx * qtd_dp_por_cx
+                sobra = 0
+            else:
+                resultados.append({
+                    "Código": cod,
+                    "Produto": produto["produto"],
+                    "Conversão": "Código inválido"
+                })
+                continue
+
+            resultados.append({
+                "Código": cod,
+                "Produto": produto["produto"],
+                "Displays": total_dp,
+                "Caixas": total_cx,
+                "Sobra Displays": sobra
+            })
+
+        df_resultado = pd.DataFrame(resultados)
+        st.success("Conversão realizada!")
+        st.dataframe(df_resultado, use_container_width=True)
 
         st.success(f"🔹 Conversão de {qtd_informada}x ({codigo_origem}) → {produto['produto']}")
         if codigo_origem == cod_cx:
