@@ -170,61 +170,68 @@ elif pagina == "Importar Produtos (Planilha)":
 elif pagina == "Executar Conversão com Estoque":
     st.title("🔁 Conversão por Lote com Estoque")
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
-    planilha_conv = st.file_uploader("📋 Planilha com Conversões (.xlsx)", type="xlsx", help="Colunas: cod_display, lote_saida, quantidade")
-
-    if not relatorio or not planilha_conv:
+    if not relatorio:
         st.stop()
 
     df_estoque = pd.read_excel(relatorio, dtype=str)
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    df_conv = pd.read_excel(planilha_conv, dtype=str)
-    df_conv["quantidade"] = df_conv["quantidade"].astype(int)
+    st.markdown("### 🧾 Informações de Conversão")
+    num_linhas = st.number_input("Número de Conversões", min_value=1, step=1, value=1)
+    entradas = []
+
+    for i in range(num_linhas):
+        st.markdown(f"#### Conversão {i+1}")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            cod = st.text_input(f"Código de Origem {i+1}", key=f"cod_{i}").upper()
+        with col2:
+            lote = st.text_input(f"Lote {i+1}", key=f"lote_{i}")
+        with col3:
+            qtd = st.number_input(f"Quantidade {i+1}", min_value=1, step=1, key=f"qtd_{i}")
+        entradas.append((cod, lote, qtd))
 
     jsons_saida = []
-    jsons_entrada = []
+    itens_entrada = []
     erros = []
 
-    for idx, row in df_conv.iterrows():
-        cod = row["cod_display"].strip().upper()
-        lote = row["lote_saida"].strip()
-        qtd = int(row["quantidade"])
+    if st.button("Gerar JSONs em Massa"):
+        for i, (cod, lote, qtd) in enumerate(entradas):
+            produto = next((p for p in dados if cod in [p["cod_caixa"], p["cod_display"]]), None)
+            if not produto:
+                erros.append(f"Conversão {i+1}: Código {cod} não encontrado.")
+                continue
 
-        produto = next((p for p in dados if cod in [p["cod_caixa"], p["cod_display"]]), None)
-        if not produto:
-            erros.append(f"Linha {idx+2}: Código {cod} não encontrado.")
-            continue
+            if df_estoque.query(f"`Cód. Merc.` == '{cod}' and `Lote Fabr.` == '{lote}'").empty:
+                erros.append(f"Conversão {i+1}: Lote {lote} para código {cod} não encontrado no estoque.")
+                continue
 
-        if df_estoque.query(f"`Cód. Merc.` == '{cod}' and `Lote Fabr.` == '{lote}'").empty:
-            erros.append(f"Linha {idx+2}: Lote {lote} para código {cod} não encontrado no estoque.")
-            continue
+            qtd_disp_cx = produto["qtd_displays_caixa"]
+            if cod == produto["cod_display"]:
+                cod_saida = cod
+                cod_entrada = produto["cod_caixa"]
+                total_entrada = qtd // qtd_disp_cx
+            else:
+                cod_saida = cod
+                cod_entrada = produto["cod_display"]
+                total_entrada = qtd * qtd_disp_cx
 
-        qtd_disp_cx = produto["qtd_displays_caixa"]
-        if cod == produto["cod_display"]:
-            cod_saida = cod
-            cod_entrada = produto["cod_caixa"]
-            total_entrada = qtd // qtd_disp_cx
-        else:
-            cod_saida = cod
-            cod_entrada = produto["cod_display"]
-            total_entrada = qtd * qtd_disp_cx
+            jsons_saida.append(gerar_json_saida(cod_saida, qtd, lote))
+            itens_entrada.append({
+                "NUMSEQ": str(len(itens_entrada) + 1),
+                "CODPROD": cod_entrada,
+                "QTPROD": str(total_entrada)
+            })
 
-        jsons_saida.append(gerar_json_saida(cod_saida, qtd, lote))
-        jsons_entrada.append({
-            "NUMSEQ": str(len(jsons_entrada) + 1),
-            "CODPROD": cod_entrada,
-            "QTPROD": str(total_entrada)
-        })
+        if erros:
+            st.warning("⚠️ Erros encontrados:")
+            st.code("\n".join(erros))
 
-    if erros:
-        st.warning("⚠️ Algumas linhas não foram processadas:")
-        st.code("\n".join(erros))
+        if jsons_saida and itens_entrada:
+            st.subheader("📦 JSONs de Saída")
+            for js in jsons_saida:
+                st.code(json.dumps(js, indent=4), language="json")
 
-    if st.button("Gerar JSONs em Massa") and jsons_saida and jsons_entrada:
-        st.subheader("📦 JSONs de Saída")
-        for i, js in enumerate(jsons_saida):
-            st.code(json.dumps(js, indent=4), language="json")
-
-        st.subheader("📥 JSON Único de Entrada")
-        entrada_final = gerar_json_entrada(jsons_entrada)
-        st.code(json.dumps(entrada_final, indent=4), language="json")
+            st.subheader("📥 JSON de Entrada Único (Valor total = 1 real)")
+            json_entrada = gerar_json_entrada(itens_entrada)
+            st.code(json.dumps(json_entrada, indent=4), language="json")
