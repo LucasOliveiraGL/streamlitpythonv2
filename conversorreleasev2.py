@@ -186,8 +186,6 @@ dados = carregar_dados()
 # ===== PÁGINA DE CONVERSÃO COM ESTOQUE =====
 if pagina == "Executar Conversão com Estoque":
     st.title("🔁 Conversão por Lote com Estoque")
-
-if pagina == "Executar Conversão com Estoque":
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
 if not relatorio:
     st.stop()
