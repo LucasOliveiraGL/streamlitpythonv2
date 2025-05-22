@@ -9,13 +9,13 @@ from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 import random
 from datetime import datetime
 
-st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
-
 # ===== CONFIGURAÇÕES =====
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 CNPJ_DESTINO = "19198834000262"
+
+st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
 
 # ===== FUNÇÕES GOOGLE DRIVE =====
 def conectar_drive():
