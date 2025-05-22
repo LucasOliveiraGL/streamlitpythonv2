@@ -112,7 +112,7 @@ def gerar_json_entrada(itens):
     }
 
 # ===== INTERFACE =====
-pagina = st.radio("📁 Menu", ["Cadastro de Produto", "Conversão de Quantidades", "Importar Produtos (Planilha)", "Executar Conversão com Estoque"])
+pagina = st.sidebar.radio("📁 Menu", ["Cadastro de Produto", "Conversão de Quantidades", "Importar Produtos (Planilha)", "Executar Conversão com Estoque"])
 dados = carregar_dados()
 
 # ===== PAG: CADASTRO MANUAL =====
