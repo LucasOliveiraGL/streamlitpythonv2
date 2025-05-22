@@ -8,6 +8,7 @@ import io
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
+PASTA_ID = "1CMC0MQYLK1tmKvUEElLj_NRRt-1igMSj"  # Substitua pelo ID real da pasta no seu Drive
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
@@ -19,7 +20,7 @@ def conectar_drive():
 
 # Buscar ID do arquivo no Drive
 def buscar_arquivo(service, nome_arquivo):
-    query = f"name='{nome_arquivo}' and trashed = false"
+    query = f"name='{nome_arquivo}' and '{PASTA_ID}' in parents and trashed = false"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
     items = results.get('files', [])
     if items:
@@ -27,9 +28,9 @@ def buscar_arquivo(service, nome_arquivo):
     return None
 
 def buscar_arquivo_debug(service, nome_arquivo):
-    query = "trashed = false"
+    query = f"'{PASTA_ID}' in parents and trashed = false"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
-    st.write("📂 Arquivos disponíveis no Drive:", results.get("files", []))
+    st.write("📂 Arquivos disponíveis na pasta:", results.get("files", []))
     return buscar_arquivo(service, nome_arquivo)
 
 # Baixar JSON do Drive
