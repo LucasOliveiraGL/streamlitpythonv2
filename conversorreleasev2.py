@@ -11,6 +11,7 @@ CAMINHO_JSON_LOCAL = Path("embalagens.json")
 NOME_ARQUIVO_DRIVE = "embalagens.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
+# Conexão com o Google Drive
 def conectar_drive():
     service_account_info = st.secrets["gdrive"]
     creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
@@ -28,14 +29,14 @@ def baixar_json(service, file_id, destino_local):
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while not done:
-        status, done = downloader.next_chunk()
+        _, done = downloader.next_chunk()
 
 def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
+# Setup inicial
 st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
-
 service = conectar_drive()
 file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
 
@@ -45,9 +46,9 @@ else:
     st.warning("Arquivo embalagens.json não encontrado. Criando arquivo vazio...")
     with open(CAMINHO_JSON_LOCAL, "w", encoding="utf-8") as f:
         json.dump([], f)
-    file_metadata = {"name": NOME_ARQUIVO_DRIVE}
+    metadata = {"name": NOME_ARQUIVO_DRIVE}
     media = MediaFileUpload(CAMINHO_JSON_LOCAL, mimetype='application/json')
-    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    file = service.files().create(body=metadata, media_body=media, fields='id').execute()
     file_id = file.get("id")
 
 def carregar_dados():
@@ -61,10 +62,11 @@ def salvar_dados(lista):
         json.dump(lista, f, indent=4, ensure_ascii=False)
     atualizar_json(service, file_id, CAMINHO_JSON_LOCAL)
 
-pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão de Quantidades","Importar Produtos"])
+pagina = st.sidebar.selectbox("📂 Menu", ["📦 Cadastro de Produto", "🔁 Conversão de Quantidades", "📥 Importar Produtos (Planilha)"])
 dados = carregar_dados()
 
-if pagina == "Cadastro de Produto":
+# Cadastro manual
+if pagina == "📦 Cadastro de Produto":
     st.title("📦 Cadastro de Produto (Display ↔ Caixa)")
 
     with st.form("cadastro_produto"):
@@ -89,22 +91,19 @@ if pagina == "Cadastro de Produto":
             st.success("Produto cadastrado com sucesso!")
             st.rerun()
 
+# Importação por planilha
 elif pagina == "📥 Importar Produtos (Planilha)":
     st.title("📥 Importar Produtos em Massa (XLSX)")
-    
-    st.markdown("Envie uma planilha com os seguintes campos obrigatórios:")
-    st.code("produto, cod_caixa, qtd_displays_caixa, cod_display, qtd_unidades_display, cod_unitario")
+    st.markdown("Envie uma planilha com os seguintes campos:")
+    st.code("produto, cod_caixa, qtd_displays_caixa, cod_display")
 
     arquivo = st.file_uploader("Selecione o arquivo .xlsx", type=["xlsx", "xls"])
-
     substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
 
-    #Pagina: Importar cadastro
-    
     if arquivo and st.button("📤 Importar"):
         try:
             df = pd.read_excel(arquivo, dtype=str)
-            obrigatorios = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display", "qtd_unidades_display", "cod_unitario"]
+            obrigatorios = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display"]
             if not all(col in df.columns for col in obrigatorios):
                 st.error(f"A planilha deve conter as colunas: {', '.join(obrigatorios)}")
                 st.stop()
@@ -112,15 +111,11 @@ elif pagina == "📥 Importar Produtos (Planilha)":
             df["produto"] = df["produto"].astype(str).str.strip()
             df["cod_caixa"] = df["cod_caixa"].astype(str).str.upper()
             df["cod_display"] = df["cod_display"].astype(str).str.upper()
-            df["cod_unitario"] = df["cod_unitario"].astype(str).str.upper()
             df["qtd_displays_caixa"] = df["qtd_displays_caixa"].astype(int)
-            df["qtd_unidades_display"] = df["qtd_unidades_display"].astype(int)
 
             lista_produtos = df.to_dict(orient="records")
-
             if substituir:
                 dados.clear()
-
             dados.extend(lista_produtos)
             salvar_dados(dados)
             st.success(f"{len(lista_produtos)} produtos importados com sucesso!")
@@ -129,27 +124,8 @@ elif pagina == "📥 Importar Produtos (Planilha)":
         except Exception as e:
             st.error(f"Erro ao importar: {e}")
 
-    st.divider()
-    st.subheader("📋 Produtos Cadastrados")
-    if dados:
-        df = pd.DataFrame(dados)
-        editados = st.data_editor(df, use_container_width=True, num_rows="dynamic", key="editor")
-        if st.button("💾 Salvar Alterações"):
-            salvar_dados(editados.to_dict(orient="records"))
-            st.success("Alterações salvas com sucesso!")
-            st.rerun()
-
-        selecionados = st.multiselect("Selecione produtos para excluir", df["produto"].tolist())
-        if st.button("🗑️ Excluir Selecionados") and selecionados:
-            df_filtrado = df[~df["produto"].isin(selecionados)]
-            salvar_dados(df_filtrado.to_dict(orient="records"))
-            st.success(f"Produtos excluídos: {', '.join(selecionados)}")
-            st.rerun()
-    else:
-        st.info("Nenhum produto cadastrado.")
-
-#Pagina: Conversão
-elif pagina == "Conversão de Quantidades":
+# Conversão em massa
+elif pagina == "🔁 Conversão de Quantidades":
     st.title("🔁 Conversão em Massa entre Caixa e Display")
 
     if not dados:
@@ -225,13 +201,3 @@ elif pagina == "Conversão de Quantidades":
         df_resultado = pd.DataFrame(resultados)
         st.success("Conversão realizada!")
         st.dataframe(df_resultado, use_container_width=True)
-
-        st.success(f"🔹 Conversão de {qtd_informada}x ({codigo_origem}) → {produto['produto']}")
-        if codigo_origem == cod_cx:
-            st.markdown(f"- 📦 **Caixas** ({cod_cx}): `{int(qtd_caixas)}`")
-            st.markdown(f"- 📦 **Displays** ({cod_dp}): `{int(qtd_displays)}`")
-        else:
-            st.markdown(f"- 📦 **Displays** ({cod_dp}): `{int(qtd_displays)}`")
-            st.markdown(f"- 📦 **Caixas** ({cod_cx}): `{int(qtd_caixas)}`")
-            if sobra_dp:
-                st.markdown(f"- ⚠️ **Displays avulsos**: `{int(sobra_dp)}`")
