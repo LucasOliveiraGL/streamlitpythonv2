@@ -30,7 +30,7 @@ def buscar_arquivo(service, nome_arquivo):
 def buscar_arquivo_debug(service, nome_arquivo):
     query = f"'{PASTA_ID}' in parents and trashed = false"
     results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
-    st.write("📂 Arquivos disponíveis na pasta:", results.get("files", []))
+    #st.write("📂 Arquivos disponíveis na pasta:", results.get("files", []))
     return buscar_arquivo(service, nome_arquivo)
 
 # Baixar JSON do Drive
