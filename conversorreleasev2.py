@@ -42,7 +42,6 @@ def atualizar_json(service, file_id, local_path):
     service.files().update(fileId=file_id, media_body=media).execute()
 
 # ===== SETUP INICIAL =====
-st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
 service = conectar_drive()
 file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
 
