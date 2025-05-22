@@ -236,7 +236,7 @@ elif pagina == "Executar Conversão com Estoque":
 
             if not cod_display or not cod_caixa or not lote:
                 erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
-                continue
+            continue
 
             jsons_saida.append({
                 "NUMSEQ": str(len(jsons_saida) + 1),
