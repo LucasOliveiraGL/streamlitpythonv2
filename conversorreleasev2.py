@@ -225,14 +225,14 @@ elif pagina == "Executar Conversão com Estoque":
             qtd_cx = int(row["qtd_cx"])
 
             # Verifica se o lote está disponível para o código DISPLAY, não CAIXA
-filtro = df_estoque[
-    (df_estoque["Cód. Merc."].str.strip().str.upper() == cod_display) &
-    (df_estoque["Lote Fabr."].str.strip().str.upper() == lote)
-]
+            filtro = df_estoque[
+                    (df_estoque["Cód. Merc."].str.strip().str.upper() == cod_display) &
+                    (df_estoque["Lote Fabr."].str.strip().str.upper() == lote)
+            ]
 
-if filtro.empty:
-    erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
-    continue
+            if filtro.empty:
+            erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
+            continue
 
             if not cod_display or not cod_caixa or not lote:
                 erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
