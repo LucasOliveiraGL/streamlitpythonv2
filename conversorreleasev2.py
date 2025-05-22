@@ -122,7 +122,7 @@ else:
     file_id = service.files().create(body=metadata, media_body=media, fields='id').execute().get("id")
 
 # ===== INTERFACE PRINCIPAL =====
-pagina = st.sidebar.radio("📁 Menu", ["Cadastro de Produto", "Importar Produtos (Planilha)", "Conversão de Quantidades", "Executar Conversão com Estoque"])
+pagina = st.sidebar.radio("📁 Menu", ["Cadastro de Produto", "Importar Produtos (Planilha)", "Executar Conversão com Estoque"])
 dados = carregar_dados()
 
 # ===== CADASTRO MANUAL =====
