@@ -28,6 +28,14 @@ def buscar_arquivo(service, nome_arquivo):
         return items[0]['id']
     return None
 
+def buscar_arquivo_debug(service, nome_arquivo):
+    query = "trashed = false"
+    results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+    st.write("📂 Arquivos encontrados:", results.get("files", []))
+    return buscar_arquivo(service, nome_arquivo)
+
+file_id = buscar_arquivo_debug(service, NOME_ARQUIVO_DRIVE)
+
 # Baixar JSON do Drive
 def baixar_json(service, file_id, destino_local):
     request = service.files().get_media(fileId=file_id)
