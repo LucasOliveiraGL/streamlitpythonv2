@@ -162,9 +162,13 @@ elif pagina == "Importar Produtos (Planilha)":
             salvar_dados(dados)
             st.success(f"{len(novos)} produtos importados!")
 
+
+#ABA DE CONVERSÃO
+
 elif pagina == "Executar Conversão com Estoque":
     st.title("🔁 Conversão por Lote com Estoque")
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
+
     if not relatorio:
         st.stop()
 
@@ -176,10 +180,7 @@ elif pagina == "Executar Conversão com Estoque":
     dados_iniciais = pd.DataFrame([{
         "cod_caixa": "",
         "qtd_cx": 1,
-        "lote": "",
-        "descricao": "",
-        "cod_display": "",
-        "qtd_disp": 1
+        "lote": ""
     }])
 
     edited = st.data_editor(
@@ -190,16 +191,17 @@ elif pagina == "Executar Conversão com Estoque":
         column_config={
             "cod_caixa": st.column_config.TextColumn(label="Código CX"),
             "qtd_cx": st.column_config.NumberColumn(label="Qtd Cx", min_value=1),
+            "cod_display": st.column_config.TextColumn(label="Código Display", disabled=True),
+            "qtd_disp": st.column_config.NumberColumn(label="Qtd Dis", disabled=True),
             "lote": st.column_config.TextColumn(label="Lote"),
             "descricao": st.column_config.TextColumn(label="Descrição", disabled=True),
-            "cod_display": st.column_config.TextColumn(label="Código Display", disabled=True),
-            "qtd_disp": st.column_config.NumberColumn(label="Qtd Dis", disabled=True)
         }
     )
 
     for idx in edited.index:
         valor_raw = edited.at[idx, "cod_caixa"]
         cod_cx = str(valor_raw).strip().upper() if valor_raw else ""
+
         produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
         if produto:
             edited.at[idx, "cod_display"] = produto["cod_display"]
@@ -222,12 +224,13 @@ elif pagina == "Executar Conversão com Estoque":
             qtd_disp = int(row["qtd_disp"])
             qtd_cx = int(row["qtd_cx"])
 
-            if not cod_display or not cod_caixa or not lote:
-                erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
-                continue
-
+            # Verifica se o lote está disponível para o código DISPLAY, não CAIXA
             if df_estoque.query(f"`Cód. Merc.` == '{cod_display}' and `Lote Fabr.` == '{lote}'").empty:
                 erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
+                continue
+
+            if not cod_display or not cod_caixa or not lote:
+                erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
                 continue
 
             jsons_saida.append({
