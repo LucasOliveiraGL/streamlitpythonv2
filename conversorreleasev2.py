@@ -203,17 +203,19 @@ elif pagina == "Executar Conversão com Estoque":
         }
     )
 
-    for idx in edited.index:
-        cod_cx = edited.at[idx, "cod_caixa"].strip().upper()
-        produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
-        if produto:
-            edited.at[idx, "cod_display"] = produto["cod_display"]
-            edited.at[idx, "descricao"] = produto["produto"]
-            edited.at[idx, "qtd_disp"] = int(edited.at[idx, "qtd_cx"]) * int(produto["qtd_displays_caixa"])
-        else:
-            edited.at[idx, "cod_display"] = ""
-            edited.at[idx, "descricao"] = ""
-            edited.at[idx, "qtd_disp"] = ""
+for idx in edited.index:
+    valor_raw = edited.at[idx, "cod_caixa"]
+    cod_cx = str(valor_raw).strip().upper() if valor_raw else ""
+
+    produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
+    if produto:
+        edited.at[idx, "cod_display"] = produto["cod_display"]
+        edited.at[idx, "descricao"] = produto["produto"]
+        edited.at[idx, "qtd_disp"] = int(edited.at[idx, "qtd_cx"]) * int(produto["qtd_displays_caixa"])
+    else:
+        edited.at[idx, "cod_display"] = ""
+        edited.at[idx, "descricao"] = ""
+        edited.at[idx, "qtd_disp"] = ""
 
     jsons_saida = []
     itens_entrada = []
@@ -223,7 +225,7 @@ elif pagina == "Executar Conversão com Estoque":
         for idx, row in edited.iterrows():
             cod_display = row["cod_display"].strip().upper()
             cod_caixa = row["cod_caixa"].strip().upper()
-            qtd_disp = int(row["qtd_disp"])
+            lote = row["lote"].strip()
             qtd_cx = int(row["qtd_cx"])
             lote = row["lote"].strip()
 
