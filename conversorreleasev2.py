@@ -168,7 +168,8 @@ elif pagina == "Importar Produtos (Planilha)":
 
 # ===== CONVERSÃO MANUAL =====
 elif pagina == "Executar Conversão com Estoque":
-    st.title("🔁 Conversão por Lote com Estoque (Display ↔ Caixa)")
+    st.title("🔁 Conversão por Lote com Estoque (via Planilha na Interface)")
+
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
     if not relatorio:
         st.stop()
@@ -176,33 +177,48 @@ elif pagina == "Executar Conversão com Estoque":
     df_estoque = pd.read_excel(relatorio, dtype=str)
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    num_linhas = st.number_input("Quantas conversões deseja fazer?", min_value=1, value=1, step=1)
-    entradas = []
+    st.markdown("### ✏️ Preencha abaixo os dados das conversões")
 
-    st.markdown("### 🧾 Informações de Conversão")
-    for i in range(num_linhas):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            cod = st.text_input(f"Código de Origem {i+1}", key=f"cod_{i}").strip().upper()
-        with col2:
-            lote = st.text_input(f"Lote {i+1}", key=f"lote_{i}").strip()
-        with col3:
-            qtd = st.number_input(f"Quantidade {i+1}", min_value=1, step=1, key=f"qtd_{i}")
-        entradas.append((cod, lote, qtd))
+    # Dados iniciais da "planilha" para edição
+    dados_edicao = pd.DataFrame([{
+        "codigo_origem": "",
+        "lote_saida": "",
+        "quantidade": 1
+    }])
+
+    edited = st.data_editor(
+        dados_edicao,
+        num_rows="dynamic",
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "codigo_origem": st.column_config.TextColumn(label="Código de Origem"),
+            "lote_saida": st.column_config.TextColumn(label="Lote"),
+            "quantidade": st.column_config.NumberColumn(label="Quantidade", min_value=1, step=1)
+        }
+    )
 
     jsons_saida = []
     itens_entrada = []
     erros = []
 
     if st.button("Gerar JSONs"):
-        for i, (cod, lote, qtd) in enumerate(entradas):
+        for idx, row in edited.iterrows():
+            cod = row["codigo_origem"].strip().upper()
+            lote = row["lote_saida"].strip()
+            qtd = int(row["quantidade"])
+
+            if not cod or not lote:
+                erros.append(f"Linha {idx+1}: Campos obrigatórios em branco.")
+                continue
+
             produto = next((p for p in dados if cod in [p["cod_caixa"], p["cod_display"]]), None)
             if not produto:
-                erros.append(f"[{i+1}] Código {cod} não cadastrado.")
+                erros.append(f"Linha {idx+1}: Código {cod} não cadastrado.")
                 continue
 
             if df_estoque.query(f"`Cód. Merc.` == '{cod}' and `Lote Fabr.` == '{lote}'").empty:
-                erros.append(f"[{i+1}] Lote {lote} não encontrado para código {cod}.")
+                erros.append(f"Linha {idx+1}: Lote {lote} não encontrado para código {cod}.")
                 continue
 
             qtd_disp_cx = produto["qtd_displays_caixa"]
@@ -215,7 +231,14 @@ elif pagina == "Executar Conversão com Estoque":
                 cod_entrada = produto["cod_display"]
                 total_entrada = qtd * qtd_disp_cx
 
-            jsons_saida.append(gerar_json_saida(cod_saida, qtd, lote))
+            jsons_saida.append({
+                "NUMSEQ": str(len(jsons_saida) + 1),
+                "CODPROD": cod_saida,
+                "QTPROD": str(qtd),
+                "VLUNIT": "1,00",
+                "LOTEFAB": lote
+            })
+
             itens_entrada.append({
                 "NUMSEQ": str(len(itens_entrada) + 1),
                 "CODPROD": cod_entrada,
@@ -227,10 +250,54 @@ elif pagina == "Executar Conversão com Estoque":
             st.code("\n".join(erros))
 
         if jsons_saida and itens_entrada:
-            st.subheader("📦 JSONs de Saída")
-            for js in jsons_saida:
-                st.code(json.dumps(js, indent=4), language="json")
+            # JSON de Saída
+            json_saida = {
+                "CORPEM_ERP_DOC_SAI": {
+                    "CGCCLIWMS": CNPJ_DESTINO,
+                    "CGCEMINF": CNPJ_DESTINO,
+                    "OBSPED": "",
+                    "OBSROM": "",
+                    "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
+                    "VLTOTPED": "1,00",
+                    "CGCDEST": "",
+                    "NOMEDEST": "",
+                    "ITENS": jsons_saida
+                }
+            }
 
-            st.subheader("📥 JSON de Entrada Único (Valor total = R$ 1,00)")
-            entrada_final = gerar_json_entrada(itens_entrada)
-            st.code(json.dumps(entrada_final, indent=4), language="json")
+            # JSON de Entrada
+            total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
+            itens_processados = []
+            for i in itens_entrada:
+                proporcional = (float(i["QTPROD"]) / total_qtd)
+                valor_item = round(proporcional, 4)
+                itens_processados.append({
+                    "NUMSEQ": i["NUMSEQ"],
+                    "CODPROD": i["CODPROD"],
+                    "QTPROD": i["QTPROD"],
+                    "VLTOTPROD": str(valor_item),
+                    "NUMSEQ_DEV": i["NUMSEQ"]
+                })
+
+            json_entrada = {
+                "CORPEM_ERP_DOC_ENT": {
+                    "CGCCLIWMS": CNPJ_DESTINO,
+                    "CGCREM": CNPJ_DESTINO,
+                    "OBSRESDP": "",
+                    "TPDESTNF": "",
+                    "DEV": "0",
+                    "NUMNF": "000000001",
+                    "SERIENF": "1",
+                    "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
+                    "VLTOTALNF": "1.00",
+                    "NUMEPEDCLI": "ENTRADA_CONVERSAO",
+                    "CHAVENF": gerar_chave_nfe(),
+                    "ITENS": itens_processados
+                }
+            }
+
+            st.subheader("📦 JSON de Saída")
+            st.code(json.dumps(json_saida, indent=4), language="json")
+
+            st.subheader("📥 JSON de Entrada (R$ 1,00 total)")
+            st.co
