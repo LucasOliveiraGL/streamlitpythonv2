@@ -61,7 +61,7 @@ def salvar_dados(lista):
         json.dump(lista, f, indent=4, ensure_ascii=False)
     atualizar_json(service, file_id, CAMINHO_JSON_LOCAL)
 
-pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão de Quantidades,"📥 Importar Produtos (Planilha)""])
+pagina = st.sidebar.selectbox("📂 Menu", ["Cadastro de Produto", "Conversão de Quantidades,"Importar Produtos (Planilha)"])
 dados = carregar_dados()
 
 if pagina == "Cadastro de Produto":
