@@ -121,11 +121,10 @@ else:
     media = MediaFileUpload(CAMINHO_JSON_LOCAL, mimetype='application/json')
     file_id = service.files().create(body=metadata, media_body=media, fields='id').execute().get("id")
 
-# ===== INTERFACE PRINCIPAL =====
+# ===== INTERFACE =====
 pagina = st.sidebar.radio("📁 Menu", ["Cadastro de Produto", "Importar Produtos (Planilha)", "Executar Conversão com Estoque"])
 dados = carregar_dados()
 
-# ===== CADASTRO MANUAL =====
 if pagina == "Cadastro de Produto":
     st.title("📦 Cadastro de Produto")
     with st.form("cadastro_produto"):
@@ -136,7 +135,6 @@ if pagina == "Cadastro de Produto":
         with col2:
             cod_display = st.text_input("Código do Display")
         qtd_disp_cx = st.number_input("Displays por Caixa", min_value=1, step=1)
-
         if st.form_submit_button("Salvar"):
             dados.append({
                 "produto": produto,
@@ -148,12 +146,10 @@ if pagina == "Cadastro de Produto":
             st.success("Produto salvo com sucesso!")
             st.rerun()
 
-# ===== IMPORTAR PRODUTOS XLSX =====
 elif pagina == "Importar Produtos (Planilha)":
     st.title("📥 Importar Produtos via Planilha")
     arq = st.file_uploader("Selecione um .xlsx", type="xlsx")
     substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
-
     if arq and st.button("Importar"):
         df = pd.read_excel(arq, dtype=str)
         obrig = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display"]
@@ -166,11 +162,9 @@ elif pagina == "Importar Produtos (Planilha)":
             salvar_dados(dados)
             st.success(f"{len(novos)} produtos importados!")
 
-# ===== CONVERSÃO COM ESTOQUE =====
 elif pagina == "Executar Conversão com Estoque":
     st.title("🔁 Conversão por Lote com Estoque")
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
-
     if not relatorio:
         st.stop()
 
@@ -203,19 +197,18 @@ elif pagina == "Executar Conversão com Estoque":
         }
     )
 
-for idx in edited.index:
-    valor_raw = edited.at[idx, "cod_caixa"]
-    cod_cx = str(valor_raw).strip().upper() if valor_raw else ""
-
-    produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
-    if produto:
-        edited.at[idx, "cod_display"] = produto["cod_display"]
-        edited.at[idx, "descricao"] = produto["produto"]
-        edited.at[idx, "qtd_disp"] = int(edited.at[idx, "qtd_cx"]) * int(produto["qtd_displays_caixa"])
-    else:
-        edited.at[idx, "cod_display"] = ""
-        edited.at[idx, "descricao"] = ""
-        edited.at[idx, "qtd_disp"] = ""
+    for idx in edited.index:
+        valor_raw = edited.at[idx, "cod_caixa"]
+        cod_cx = str(valor_raw).strip().upper() if valor_raw else ""
+        produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
+        if produto:
+            edited.at[idx, "cod_display"] = produto["cod_display"]
+            edited.at[idx, "descricao"] = produto["produto"]
+            edited.at[idx, "qtd_disp"] = int(edited.at[idx, "qtd_cx"]) * int(produto["qtd_displays_caixa"])
+        else:
+            edited.at[idx, "cod_display"] = ""
+            edited.at[idx, "descricao"] = ""
+            edited.at[idx, "qtd_disp"] = ""
 
     jsons_saida = []
     itens_entrada = []
@@ -223,11 +216,11 @@ for idx in edited.index:
 
     if st.button("Gerar JSONs"):
         for idx, row in edited.iterrows():
-            cod_display = row["cod_display"].strip().upper()
-            cod_caixa = row["cod_caixa"].strip().upper()
-            lote = row["lote"].strip()
+            cod_display = str(row["cod_display"]).strip().upper() if row["cod_display"] else ""
+            cod_caixa = str(row["cod_caixa"]).strip().upper() if row["cod_caixa"] else ""
+            lote = str(row["lote"]).strip() if row["lote"] else ""
+            qtd_disp = int(row["qtd_disp"])
             qtd_cx = int(row["qtd_cx"])
-            lote = row["lote"].strip()
 
             if not cod_display or not cod_caixa or not lote:
                 erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
@@ -253,16 +246,14 @@ for idx in edited.index:
 
         if erros:
             st.warning("⚠️ Erros encontrados:")
-            st.code("\\n".join(erros))
+            st.code("\n".join(erros))
 
         if jsons_saida and itens_entrada:
             json_saida = gerar_json_saida("MULTIPLOS", 0, "")
             json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"] = jsons_saida
-
             json_entrada = gerar_json_entrada(itens_entrada)
 
             st.subheader("📦 JSON de Saída")
             st.code(json.dumps(json_saida, indent=4), language="json")
-
             st.subheader("📥 JSON de Entrada (R$ 1,00 total)")
             st.code(json.dumps(json_entrada, indent=4), language="json")
