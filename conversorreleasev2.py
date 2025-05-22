@@ -232,6 +232,6 @@ elif pagina == "Executar Conversão com Estoque":
             for js in jsons_saida:
                 st.code(json.dumps(js, indent=4), language="json")
 
-            st.subheader("📥 JSON de Entrada Único (Valor total = 1 real)")
+            st.subheader("📥 JSON de Entrada")
             json_entrada = gerar_json_entrada(itens_entrada)
             st.code(json.dumps(json_entrada, indent=4), language="json")
