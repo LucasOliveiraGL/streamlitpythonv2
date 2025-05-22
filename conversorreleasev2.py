@@ -1,13 +1,13 @@
 import streamlit as st
 import json
-from pathlib import Path
 import pandas as pd
+from datetime import datetime
+import random
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 import io
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-import random
-from datetime import datetime
+from googleapiclient.http import MediaIoBaseDownload
 
 # ===== CONFIGURAÇÕES =====
 CAMINHO_JSON_LOCAL = Path("embalagens.json")
@@ -39,21 +39,7 @@ def atualizar_json(service, file_id, local_path):
     media = MediaFileUpload(local_path, mimetype='application/json')
     service.files().update(fileId=file_id, media_body=media).execute()
 
-# ===== SETUP INICIAL =====
-st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
-service = conectar_drive()
-file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
-
-if file_id:
-    baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
-else:
-    with open(CAMINHO_JSON_LOCAL, "w", encoding="utf-8") as f:
-        json.dump([], f)
-    metadata = {"name": NOME_ARQUIVO_DRIVE}
-    media = MediaFileUpload(CAMINHO_JSON_LOCAL, mimetype='application/json')
-    file_id = service.files().create(body=metadata, media_body=media, fields='id').execute().get("id")
-
-# ===== FUNÇÕES DE DADOS =====
+# ===== FUNÇÕES JSON =====
 def carregar_dados():
     if CAMINHO_JSON_LOCAL.exists():
         with open(CAMINHO_JSON_LOCAL, "r", encoding="utf-8") as f:
@@ -68,239 +54,156 @@ def salvar_dados(lista):
 def gerar_chave_nfe():
     return ''.join([str(random.randint(0, 9)) for _ in range(44)])
 
-def gerar_json_saida(codprod, qtde, lote):
-    return {
-        "CORPEM_ERP_DOC_SAI": {
-            "CGCCLIWMS": CNPJ_DESTINO,
-            "CGCEMINF": CNPJ_DESTINO,
-            "OBSPED": "",
-            "OBSROM": "",
-            "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
-            "VLTOTPED": "1,00",
-            "CGCDEST": "",
-            "NOMEDEST": "",
-            "ITENS": [{
-                "NUMSEQ": "1",
-                "CODPROD": codprod,
-                "QTPROD": str(qtde),
-                "VLUNIT": "1,00",
-                "LOTEFAB": lote
-            }]
-        }
-    }
+# ===== INICIALIZAÇÃO =====
+st.set_page_config(page_title="Conversor de Embalagens", layout="wide")
+service = conectar_drive()
+file_id = buscar_arquivo(service, NOME_ARQUIVO_DRIVE)
 
-def gerar_json_entrada(itens):
-    # Totalizar quantidades para proporção
-    total_qtd = sum([float(i["QTPROD"]) for i in itens])
-    itens_processados = []
-    for i in itens:
-        proporcional = (float(i["QTPROD"]) / total_qtd)
-        valor_item = round(proporcional, 4)
-        itens_processados.append({
-            "NUMSEQ": i["NUMSEQ"],
-            "CODPROD": i["CODPROD"],
-            "QTPROD": i["QTPROD"],
-            "VLTOTPROD": str(valor_item),
-            "NUMSEQ_DEV": i["NUMSEQ"]
-        })
+if file_id:
+    baixar_json(service, file_id, CAMINHO_JSON_LOCAL)
+else:
+    with open(CAMINHO_JSON_LOCAL, "w", encoding="utf-8") as f:
+        json.dump([], f)
+    metadata = {"name": NOME_ARQUIVO_DRIVE}
+    media = MediaFileUpload(CAMINHO_JSON_LOCAL, mimetype='application/json')
+    file_id = service.files().create(body=metadata, media_body=media, fields='id').execute().get("id")
 
-    return {
-        "CORPEM_ERP_DOC_ENT": {
-            "CGCCLIWMS": CNPJ_DESTINO,
-            "CGCREM": CNPJ_DESTINO,
-            "OBSRESDP": "",
-            "TPDESTNF": "",
-            "DEV": "0",
-            "NUMNF": "000000001",
-            "SERIENF": "1",
-            "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
-            "VLTOTALNF": "1.00",
-            "NUMEPEDCLI": "ENTRADA_CONVERSAO",
-            "CHAVENF": gerar_chave_nfe(),
-            "ITENS": itens_processados
-        }
-    }
-
-# ===== INTERFACE PRINCIPAL =====
-pagina = st.sidebar.radio("📁 Menu", ["Cadastro de Produto", "Importar Produtos (Planilha)", "Conversão de Quantidades", "Executar Conversão com Estoque"])
 dados = carregar_dados()
 
-# ===== CADASTRO MANUAL =====
-if pagina == "Cadastro de Produto":
-    st.title("📦 Cadastro de Produto")
-    with st.form("cadastro_produto"):
-        produto = st.text_input("Nome do Produto")
-        col1, col2 = st.columns(2)
-        with col1:
-            cod_caixa = st.text_input("Código da Caixa")
-        with col2:
-            cod_display = st.text_input("Código do Display")
-        qtd_disp_cx = st.number_input("Displays por Caixa", min_value=1, step=1)
+# ===== PÁGINA DE CONVERSÃO COM ESTOQUE =====
+st.title("🔁 Conversão por Lote com Estoque")
 
-        if st.form_submit_button("Salvar"):
-            dados.append({
-                "produto": produto,
-                "cod_caixa": cod_caixa.upper(),
-                "cod_display": cod_display.upper(),
-                "qtd_displays_caixa": int(qtd_disp_cx)
-            })
-            salvar_dados(dados)
-            st.success("Produto salvo com sucesso!")
-            st.rerun()
+relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
+if not relatorio:
+    st.stop()
 
-# ===== IMPORTAR PRODUTOS XLSX =====
-elif pagina == "Importar Produtos (Planilha)":
-    st.title("📥 Importar Produtos via Planilha")
-    arq = st.file_uploader("Selecione um .xlsx", type="xlsx")
-    substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
+df_estoque = pd.read_excel(relatorio, dtype=str)
+df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    if arq and st.button("Importar"):
-        df = pd.read_excel(arq, dtype=str)
-        obrig = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display"]
-        if not all(c in df.columns for c in obrig):
-            st.error("Colunas obrigatórias ausentes.")
-        else:
-            df["qtd_displays_caixa"] = df["qtd_displays_caixa"].astype(int)
-            novos = df.to_dict(orient="records")
-            dados = novos if substituir else dados + novos
-            salvar_dados(dados)
-            st.success(f"{len(novos)} produtos importados!")
+st.markdown("### ✏️ Preencha abaixo as conversões")
 
-# ===== CONVERSÃO MANUAL =====
-elif pagina == "Executar Conversão com Estoque":
-    st.title("🔁 Conversão por Lote com Estoque")
+dados_iniciais = pd.DataFrame([{
+    "cod_caixa": "",
+    "qtd_cx": 1,
+    "lote": "",
+    "descricao": "",
+    "cod_display": "",
+    "qtd_disp": 1
+}])
 
-    relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
-    if not relatorio:
-        st.stop()
+edited = st.data_editor(
+    dados_iniciais,
+    num_rows="dynamic",
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "cod_caixa": st.column_config.TextColumn(label="Código CX"),
+        "qtd_cx": st.column_config.NumberColumn(label="Qtd Cx", min_value=1),
+        "lote": st.column_config.TextColumn(label="Lote"),
+        "descricao": st.column_config.TextColumn(label="Descrição", disabled=True),
+        "cod_display": st.column_config.TextColumn(label="Código Display", disabled=True),
+        "qtd_disp": st.column_config.NumberColumn(label="Qtd Dis", disabled=True)
+    }
+)
 
-    df_estoque = pd.read_excel(relatorio, dtype=str)
-    df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
+# Preenchimento automático
+for idx in edited.index:
+    cod_cx = edited.at[idx, "cod_caixa"].strip().upper()
+    produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
+    if produto:
+        edited.at[idx, "cod_display"] = produto["cod_display"]
+        edited.at[idx, "descricao"] = produto["produto"]
+        edited.at[idx, "qtd_disp"] = int(edited.at[idx, "qtd_cx"]) * int(produto["qtd_displays_caixa"])
+    else:
+        edited.at[idx, "cod_display"] = ""
+        edited.at[idx, "descricao"] = ""
+        edited.at[idx, "qtd_disp"] = ""
 
-    st.markdown("### ✏️ Preencha abaixo as conversões")
+jsons_saida = []
+itens_entrada = []
+erros = []
 
-    dados_iniciais = pd.DataFrame([{
-        "cod_caixa": "",
-        "qtd_cx": 1,
-        "cod_display": "",
-        "qtd_disp": 1,
-        "lote": "",
-        "descricao": ""
-    }])
+if st.button("Gerar JSONs"):
+    for idx, row in edited.iterrows():
+        cod_display = row["cod_display"].strip().upper()
+        cod_caixa = row["cod_caixa"].strip().upper()
+        qtd_disp = int(row["qtd_disp"])
+        qtd_cx = int(row["qtd_cx"])
+        lote = row["lote"].strip()
 
-    edited = st.data_editor(
-        dados_iniciais,
-        num_rows="dynamic",
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "cod_caixa": st.column_config.TextColumn(label="Código CX"),
-            "qtd_cx": st.column_config.NumberColumn(label="Qtd Cx", min_value=1),
-            "cod_display": st.column_config.TextColumn(label="Código Display"),
-            "qtd_disp": st.column_config.NumberColumn(label="Qtd Dis", min_value=1),
-            "lote": st.column_config.TextColumn(label="Lote"),
-            "descricao": st.column_config.TextColumn(label="Descrição", disabled=True)
+        if not cod_display or not cod_caixa or not lote:
+            erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
+            continue
+
+        if df_estoque.query(f"`Cód. Merc.` == '{cod_display}' and `Lote Fabr.` == '{lote}'").empty:
+            erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
+            continue
+
+        jsons_saida.append({
+            "NUMSEQ": str(len(jsons_saida) + 1),
+            "CODPROD": cod_display,
+            "QTPROD": str(qtd_disp),
+            "VLUNIT": "1,00",
+            "LOTEFAB": lote
+        })
+
+        itens_entrada.append({
+            "NUMSEQ": str(len(itens_entrada) + 1),
+            "CODPROD": cod_caixa,
+            "QTPROD": str(qtd_cx)
+        })
+
+    if erros:
+        st.warning("⚠️ Erros encontrados:")
+        st.code("\\n".join(erros))
+
+    if jsons_saida and itens_entrada:
+        json_saida = {
+            "CORPEM_ERP_DOC_SAI": {
+                "CGCCLIWMS": CNPJ_DESTINO,
+                "CGCEMINF": CNPJ_DESTINO,
+                "OBSPED": "",
+                "OBSROM": "",
+                "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
+                "VLTOTPED": "1,00",
+                "CGCDEST": "",
+                "NOMEDEST": "",
+                "ITENS": jsons_saida
+            }
         }
-    )
 
-    # Buscar descrição automaticamente
-    for idx in edited.index:
-        cod = edited.at[idx, "cod_caixa"] or edited.at[idx, "cod_display"]
-        if cod:
-            produto = next((p for p in dados if cod in [p["cod_caixa"], p["cod_display"]]), None)
-            if produto:
-                edited.at[idx, "descricao"] = produto["produto"]
-
-    jsons_saida = []
-    itens_entrada = []
-    erros = []
-
-    if st.button("Gerar JSONs"):
-        for idx, row in edited.iterrows():
-            cod_saida = row["cod_display"].strip().upper()
-            cod_entrada = row["cod_caixa"].strip().upper()
-            qtd_disp = int(row["qtd_disp"])
-            qtd_cx = int(row["qtd_cx"])
-            lote = row["lote"].strip()
-
-            if not cod_saida or not cod_entrada or not lote:
-                erros.append(f"Linha {idx+1}: Preencha todos os campos obrigatórios.")
-                continue
-
-            produto = next((p for p in dados if cod_saida in [p["cod_display"]] and cod_entrada in [p["cod_caixa"]]), None)
-            if not produto:
-                erros.append(f"Linha {idx+1}: Par de códigos não encontrado no cadastro.")
-                continue
-
-            if df_estoque.query(f"`Cód. Merc.` == '{cod_saida}' and `Lote Fabr.` == '{lote}'").empty:
-                erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_saida}.")
-                continue
-
-            jsons_saida.append({
-                "NUMSEQ": str(len(jsons_saida) + 1),
-                "CODPROD": cod_saida,
-                "QTPROD": str(qtd_disp),
-                "VLUNIT": "1,00",
-                "LOTEFAB": lote
+        total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
+        itens_processados = []
+        for i in itens_entrada:
+            proporcional = (float(i["QTPROD"]) / total_qtd)
+            valor_item = round(proporcional, 4)
+            itens_processados.append({
+                "NUMSEQ": i["NUMSEQ"],
+                "CODPROD": i["CODPROD"],
+                "QTPROD": i["QTPROD"],
+                "VLTOTPROD": str(valor_item),
+                "NUMSEQ_DEV": i["NUMSEQ"]
             })
 
-            itens_entrada.append({
-                "NUMSEQ": str(len(itens_entrada) + 1),
-                "CODPROD": cod_entrada,
-                "QTPROD": str(qtd_cx)
-            })
-
-        if erros:
-            st.warning("⚠️ Erros encontrados:")
-            st.code("\n".join(erros))
-
-        if jsons_saida and itens_entrada:
-            json_saida = {
-                "CORPEM_ERP_DOC_SAI": {
-                    "CGCCLIWMS": CNPJ_DESTINO,
-                    "CGCEMINF": CNPJ_DESTINO,
-                    "OBSPED": "",
-                    "OBSROM": "",
-                    "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
-                    "VLTOTPED": "1,00",
-                    "CGCDEST": "",
-                    "NOMEDEST": "",
-                    "ITENS": jsons_saida
-                }
+        json_entrada = {
+            "CORPEM_ERP_DOC_ENT": {
+                "CGCCLIWMS": CNPJ_DESTINO,
+                "CGCREM": CNPJ_DESTINO,
+                "OBSRESDP": "",
+                "TPDESTNF": "",
+                "DEV": "0",
+                "NUMNF": "000000001",
+                "SERIENF": "1",
+                "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
+                "VLTOTALNF": "1.00",
+                "NUMEPEDCLI": "ENTRADA_CONVERSAO",
+                "CHAVENF": gerar_chave_nfe(),
+                "ITENS": itens_processados
             }
+        }
 
-            total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
-            itens_processados = []
-            for i in itens_entrada:
-                proporcional = (float(i["QTPROD"]) / total_qtd)
-                valor_item = round(proporcional, 4)
-                itens_processados.append({
-                    "NUMSEQ": i["NUMSEQ"],
-                    "CODPROD": i["CODPROD"],
-                    "QTPROD": i["QTPROD"],
-                    "VLTOTPROD": str(valor_item),
-                    "NUMSEQ_DEV": i["NUMSEQ"]
-                })
+        st.subheader("📦 JSON de Saída")
+        st.code(json.dumps(json_saida, indent=4), language="json")
 
-            json_entrada = {
-                "CORPEM_ERP_DOC_ENT": {
-                    "CGCCLIWMS": CNPJ_DESTINO,
-                    "CGCREM": CNPJ_DESTINO,
-                    "OBSRESDP": "",
-                    "TPDESTNF": "",
-                    "DEV": "0",
-                    "NUMNF": "000000001",
-                    "SERIENF": "1",
-                    "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
-                    "VLTOTALNF": "1.00",
-                    "NUMEPEDCLI": "ENTRADA_CONVERSAO",
-                    "CHAVENF": gerar_chave_nfe(),
-                    "ITENS": itens_processados
-                }
-            }
-
-            st.subheader("📦 JSON de Saída")
-            st.code(json.dumps(json_saida, indent=4), language="json")
-
-            st.subheader("📥 JSON de Entrada (R$ 1,00 total)")
-            st.code(json.dumps(json_entrada, indent=4), language="json")
+        st.subheader("📥 JSON de Entrada (R$ 1,00 total)")
+        st.code(json.dumps(json_entrada, indent=4), language="json")
