@@ -333,7 +333,32 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            st.subheader("📦 JSON de Saída")
-            st.code(json.dumps(json_saida, indent=4), language="json")
-            st.subheader("📥 JSON de Entrada")
-            st.code(json.dumps(json_entrada, indent=4), language="json")
+def mostrar_resumo_jsons(json_saida, json_entrada):
+    st.subheader("📦 Resumo - JSON de Saída")
+    for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
+        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
+
+    st.subheader("📥 Resumo - JSON de Entrada")
+    for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
+        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
+
+# Chamada de envio
+def enviar_para_api(json_saida, json_entrada):
+    url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
+
+    headers = {"Content-Type": "application/json"}
+
+    resposta_saida = requests.post(url, headers=headers, json=json_saida)
+    resposta_entrada = requests.post(url, headers=headers, json=json_entrada)
+
+    if resposta_saida.ok and resposta_entrada.ok:
+        st.success("✅ JSONs enviados com sucesso!")
+    else:
+        st.error(f"Erro no envio:\nSaída: {resposta_saida.status_code}\nEntrada: {resposta_entrada.status_code}")
+
+# Exibir resumos
+mostrar_resumo_jsons(json_saida, json_entrada)
+
+# Botão de envio
+if st.button("📤 Enviar JSONs para CORPEM"):
+    enviar_para_api(json_saida, json_entrada)
