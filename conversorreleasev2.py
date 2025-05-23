@@ -178,11 +178,11 @@ elif pagina == "Executar Conversão com Estoque":
     df_estoque.columns = df_estoque.columns.str.strip()
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    col_merc = "Cód. Merc."
+    col_merc = "Cód. Produto"
     col_lote = "Lote Fabr."
 
     if col_merc not in df_estoque.columns or col_lote not in df_estoque.columns:
-        st.error("❌ Colunas 'Cód. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
+        st.error("❌ Colunas 'Cód. Produto' ou 'Lote Fabr.' não encontradas no relatório.")
         st.stop()
 
     st.markdown("### ✏️ Preencha abaixo as conversões")
@@ -207,22 +207,22 @@ elif pagina == "Executar Conversão com Estoque":
 
     resultados_processados = []
     for idx in edited.index:
-        raw_cod = edited.at[idx, "cod_caixa"]
-        raw_qtd = edited.at[idx, "qtd_cx"]
-        raw_lote = edited.at[idx, "lote"]
+        cod_input = edited.at[idx, "cod_caixa"]
+        qtd_input = edited.at[idx, "qtd_cx"]
+        lote_input = edited.at[idx, "lote"]
 
-        cod_cx = str(raw_cod).strip().upper() if pd.notna(raw_cod) else ""
-        qtd_cx = int(raw_qtd) if pd.notna(raw_qtd) else 0
-        lote = str(raw_lote).strip().upper() if pd.notna(raw_lote) else ""
+        cod_caixa = str(cod_input).strip().upper() if pd.notna(cod_input) else ""
+        qtd_cx = int(qtd_input) if pd.notna(qtd_input) else 0
+        lote = str(lote_input).strip().upper() if pd.notna(lote_input) else ""
 
-        produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
+        produto = next((p for p in dados if cod_caixa == p["cod_caixa"]), None)
         cod_display = produto["cod_display"] if produto else ""
         descricao = produto["produto"] if produto else ""
         qtd_disp = qtd_cx * int(produto["qtd_displays_caixa"]) if produto else 0
 
         resultados_processados.append({
             "linha": idx + 1,
-            "cod_caixa": cod_cx,
+            "cod_caixa": cod_caixa,
             "cod_display": cod_display,
             "qtd_cx": qtd_cx,
             "qtd_disp": qtd_disp,
@@ -233,8 +233,6 @@ elif pagina == "Executar Conversão com Estoque":
     jsons_saida = []
     itens_entrada = []
     erros = []
-    json_saida = {}
-    json_entrada = {}
 
     if st.button("Gerar JSONs"):
         df_estoque[col_merc] = df_estoque[col_merc].str.strip().str.upper()
@@ -252,42 +250,41 @@ elif pagina == "Executar Conversão com Estoque":
                 continue
 
             filtro = df_estoque[
-                (df_estoque[col_merc] == cod_display) &
+                (df_estoque[col_merc] == cod_caixa) & 
                 (df_estoque[col_lote] == lote)
             ]
 
             if filtro.empty:
-                erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_display}.")
+                erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_caixa}.")
                 continue
 
-            # SAÍDA: Display a baixar
-            jsons_saida.append({
-                "NUMSEQ": str(len(jsons_saida) + 1),
-                "CODPROD": cod_display,
-                "QTPROD": str(qtd_disp),
-                "VLUNIT": "1,00",
-                "LOTFAB": lote
-            })
-
-            # ENTRADA: Caixa gerada
+            # ENTRADA → quantidade convertida (display)
             itens_entrada.append({
                 "NUMSEQ": str(len(itens_entrada) + 1),
+                "CODPROD": cod_display,
+                "QTPROD": str(qtd_disp)
+            })
+
+            # SAÍDA → quantidade original (caixa)
+            jsons_saida.append({
+                "NUMSEQ": str(len(jsons_saida) + 1),
                 "CODPROD": cod_caixa,
-                "QTPROD": str(qtd_cx)
+                "QTPROD": str(qtd_cx),
+                "VLUNIT": "1,00",
+                "LOTFAB": lote
             })
 
         if erros:
             st.warning("⚠️ Erros encontrados:")
             st.code("\n".join(erros))
-
-        if jsons_saida and itens_entrada:
+        else:
             json_saida = {
                 "CORPEM_ERP_DOC_SAI": {
                     "CGCCLIWMS": CNPJ_DESTINO,
                     "CGCEMINF": CNPJ_DESTINO,
                     "OBSPED": "",
                     "OBSROM": "",
-                    "NUMPEDCLI": gerar_numped(),
+                    "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
                     "VLTOTPED": "1,00",
                     "CGCDEST": "",
                     "NOMEDEST": "",
@@ -325,7 +322,7 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            # Mostra resumo dos dois JSONs
+            # Exibir resumo
             st.subheader("📦 Resumo - JSON de Saída")
             for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
                 st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
@@ -334,14 +331,13 @@ elif pagina == "Executar Conversão com Estoque":
             for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
                 st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
 
-            # Botão de envio — aparece apenas se os JSONs foram montados com sucesso
+            # Botão de envio
             if st.button("📤 Enviar JSONs para CORPEM"):
                 url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
                 headers = {"Content-Type": "application/json"}
                 r1 = requests.post(url, headers=headers, json=json_saida)
                 r2 = requests.post(url, headers=headers, json=json_entrada)
-
                 if r1.ok and r2.ok:
                     st.success("✅ JSONs enviados com sucesso!")
                 else:
-                    st.error(f"Erro no envio: Saída = {r1.status_code}, Entrada = {r2.status_code}")
+                    st.error(f"Erro no envio:\nSaída: {r1.status_code}\nEntrada: {r2.status_code}")
