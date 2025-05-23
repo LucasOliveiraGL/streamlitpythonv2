@@ -159,6 +159,36 @@ if pagina == "Cadastro de Produto":
         st.dataframe(df, use_container_width=True)
     else:
         st.error("Nenhum produto cadastrado ainda.")
+
+elif pagina == "Importar Produtos (Planilha)":
+    st.title("📥 Importar Produtos via Planilha")
+
+    arq = st.file_uploader("Selecione um .xlsx", type="xlsx")
+    substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
+
+    if arq and st.button("Importar"):
+        try:
+            df = pd.read_excel(arq, dtype=str)
+            obrig = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display"]
+            if not all(c in df.columns for c in obrig):
+                st.error("❌ Colunas obrigatórias ausentes. Verifique: produto, cod_caixa, qtd_displays_caixa, cod_display")
+            else:
+                df["qtd_displays_caixa"] = df["qtd_displays_caixa"].astype(int)
+                novos = df[obrig].to_dict(orient="records")
+                dados = novos if substituir else dados + novos
+                salvar_dados(dados)
+                st.success(f"✅ {len(novos)} produtos importados com sucesso!")
+                st.rerun()
+        except Exception as e:
+            st.error(f"❌ Erro ao processar o arquivo: {e}")
+
+    if dados:
+        st.markdown("### 📋 Produtos Cadastrados")
+        df_view = pd.DataFrame(dados)
+        df_view.columns = ["Nome", "Código da Caixa", "Displays por Caixa", "Código do Display"]
+        st.dataframe(df_view, use_container_width=True)
+    else:
+        st.info("ℹ️ Nenhum produto cadastrado ainda.")
         
 
 elif pagina == "Executar Conversão com Estoque":
