@@ -150,6 +150,16 @@ if pagina == "Cadastro de Produto":
             st.success("Produto salvo com sucesso!")
             st.rerun()
 
+if dados:
+    st.markdown("### 📋 Produtos Cadastrados")
+    for i, item in enumerate(dados, start=1):
+        st.markdown(
+            f"{i}. **{item['produto']}** | Caixa: `{item['cod_caixa']}` | Display: `{item['cod_display']}` | Displays por caixa: `{item['qtd_displays_caixa']}`"
+        )
+else:
+    st.info("Nenhum produto cadastrado ainda.")
+
+
 elif pagina == "Importar Produtos (Planilha)":
     st.title("📥 Importar Produtos via Planilha")
     arq = st.file_uploader("Selecione um .xlsx", type="xlsx")
