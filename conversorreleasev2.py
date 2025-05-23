@@ -60,7 +60,6 @@ def gerar_chave_nfe():
 
 def gerar_numped():
     return ''.join([str(random.randint(0, 9)) for _ in range(6)])
-    numero_pedido = gerar_numped()
 
 def gerar_json_saida(codprod, qtde, lote):
     return {
@@ -194,7 +193,8 @@ elif pagina == "Executar Conversão com Estoque":
 
     col_merc = "Cód. Merc."
     col_lote = "Lote Fabr."
-
+    numero_pedido = gerar_numped()
+    
     if col_merc not in df_estoque.columns or col_lote not in df_estoque.columns:
         st.error("❌ Colunas 'Cód. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
         st.stop()
