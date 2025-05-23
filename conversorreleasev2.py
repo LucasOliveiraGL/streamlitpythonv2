@@ -340,17 +340,17 @@ elif pagina == "Executar Conversão com Estoque":
             st.session_state["json_entrada"] = json_entrada
 
 # 🔁 Bloco de envio separado para funcionar mesmo após reload
-        if "json_saida" in st.session_state and "json_entrada" in st.session_state:
-            json_saida = st.session_state["json_saida"]
-            json_entrada = st.session_state["json_entrada"]
+if "json_saida" in st.session_state and "json_entrada" in st.session_state:
+    json_saida = st.session_state["json_saida"]
+    json_entrada = st.session_state["json_entrada"]
 
     st.subheader("📦 Resumo - JSON de Saída")
-    for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
+    for item in json_saida.get("CORPEM_ERP_DOC_SAI", {}).get("ITENS", []):
         st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
 
     st.subheader("📥 Resumo - JSON de Entrada")
-    for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
-        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
+    for item in json_entrada.get("CORPEM_ERP_DOC_ENT", {}).get("ITENS", []):
+        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}`")
 
     if st.button("📤 Enviar JSONs para CORPEM"):
         import json, io
@@ -358,6 +358,7 @@ elif pagina == "Executar Conversão com Estoque":
 
         url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
         headers = {"Content-Type": "application/json"}
+
         r1 = requests.post(url, headers=headers, json=json_saida)
         r2 = requests.post(url, headers=headers, json=json_entrada)
 
