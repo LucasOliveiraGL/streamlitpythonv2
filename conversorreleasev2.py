@@ -157,7 +157,7 @@ if pagina == "Cadastro de Produto":
         st.markdown("### 📋 Produtos Cadastrados")
         df = pd.DataFrame(dados)
         df.columns = ["Nome", "Código da Caixa", "Código do Display", "Displays por Caixa"]
-        st.dataframe(df, use_container_width=True)
+        st.dataframe_editor(df, use_container_width=True)
     else:
         st.info("Nenhum produto cadastrado ainda.")
         
