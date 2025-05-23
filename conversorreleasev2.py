@@ -178,7 +178,6 @@ elif pagina == "Executar Conversão com Estoque":
     df_estoque.columns = df_estoque.columns.str.strip()
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    # Colunas exatas do relatório
     col_merc = "Cód. Merc."
     col_lote = "Lote Fabr."
 
@@ -213,13 +212,8 @@ elif pagina == "Executar Conversão com Estoque":
         raw_qtd = edited.at[idx, "qtd_cx"]
         raw_lote = edited.at[idx, "lote"]
 
-        if pd.isna(raw_cod):
-            cod_cx = ""
-        elif isinstance(raw_cod, str):
-            cod_cx = raw_cod.strip().upper()
-        elif isinstance(raw_cod, (int, float)):
-            cod_cx = f"PA-{int(raw_cod)}"
-        else:
+        cod_cx = ""
+        if pd.notna(raw_cod):
             cod_cx = str(raw_cod).strip().upper()
 
         qtd_cx = int(raw_qtd) if pd.notna(raw_qtd) else 0
@@ -243,6 +237,8 @@ elif pagina == "Executar Conversão com Estoque":
     jsons_saida = []
     itens_entrada = []
     erros = []
+    json_saida = {}
+    json_entrada = {}
 
     if st.button("Gerar JSONs"):
         df_estoque[col_merc] = df_estoque[col_merc].str.strip().str.upper()
@@ -260,28 +256,28 @@ elif pagina == "Executar Conversão com Estoque":
                 continue
 
             filtro = df_estoque[
-                (df_estoque[col_merc] == cod_caixa) &
+                (df_estoque[col_merc] == cod_display) &  # usa o código display para validar estoque
                 (df_estoque[col_lote] == lote)
             ]
 
             if filtro.empty:
-                erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_caixa}.")
+                erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_display}.")
                 continue
 
-            # JSON de ENTRADA → quantidade convertida (display)
-            itens_entrada.append({
-                "NUMSEQ": str(len(itens_entrada) + 1),
-                "CODPROD": cod_display,
-                "QTPROD": str(qtd_disp)
-            })
-
-            # JSON de SAÍDA → quantidade original (caixa)
+            # JSON de SAÍDA (Display a baixar)
             jsons_saida.append({
                 "NUMSEQ": str(len(jsons_saida) + 1),
-                "CODPROD": cod_caixa,
-                "QTPROD": str(qtd_cx),
+                "CODPROD": cod_display,
+                "QTPROD": str(qtd_disp),
                 "VLUNIT": "1,00",
                 "LOTFAB": lote
+            })
+
+            # JSON de ENTRADA (Caixa gerada)
+            itens_entrada.append({
+                "NUMSEQ": str(len(itens_entrada) + 1),
+                "CODPROD": cod_caixa,
+                "QTPROD": str(qtd_cx)
             })
 
         if erros:
@@ -333,32 +329,24 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-def mostrar_resumo_jsons(json_saida, json_entrada):
-    st.subheader("📦 Resumo - JSON de Saída")
-    for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
-        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
+            st.subheader("📦 Resumo - JSON de Saída")
+            for item in jsons_saida:
+                st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
 
-    st.subheader("📥 Resumo - JSON de Entrada")
-    for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
-        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
+            st.subheader("📥 Resumo - JSON de Entrada")
+            for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
+                st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
 
-# Chamada de envio
-def enviar_para_api(json_saida, json_entrada):
-    url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
+            if st.button("📤 Enviar JSONs para CORPEM"):
+                url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
+                headers = {"Content-Type": "application/json"}
+                r1 = requests.post(url, headers=headers, json=json_saida)
+                r2 = requests.post(url, headers=headers, json=json_entrada)
 
-    headers = {"Content-Type": "application/json"}
-
-    resposta_saida = requests.post(url, headers=headers, json=json_saida)
-    resposta_entrada = requests.post(url, headers=headers, json=json_entrada)
-
-    if resposta_saida.ok and resposta_entrada.ok:
-        st.success("✅ JSONs enviados com sucesso!")
-    else:
-        st.error(f"Erro no envio:\nSaída: {resposta_saida.status_code}\nEntrada: {resposta_entrada.status_code}")
-
-# Exibir resumos
-mostrar_resumo_jsons(json_saida, json_entrada)
-
+                if r1.ok and r2.ok:
+                    st.success("✅ JSONs enviados com sucesso!")
+                else:
+                    st.error(f"Erro no envio: Saída = {r1.status_code}, Entrada = {r2.status_code}")
 # Botão de envio
 if st.button("📤 Enviar JSONs para CORPEM"):
     enviar_para_api(json_saida, json_entrada)
