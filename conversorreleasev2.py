@@ -286,7 +286,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "CGCEMINF": CNPJ_DESTINO,
                     "OBSPED": "",
                     "OBSROM": "",
-                    "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
+                    "NUMPEDCLI": gerar_numped(),
                     "VLTOTPED": "1,00",
                     "CGCDEST": "",
                     "NOMEDEST": "",
@@ -318,7 +318,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "SERIENF": "1",
                     "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
                     "VLTOTALNF": "1.00",
-                    "NUMEPEDCLI": "ENTRADA_CONVERSAO",
+                    "NUMEPEDCLI": gerar_numped(),
                     "CHAVENF": gerar_chave_nfe(),
                     "ITENS": itens_processados
                 }
