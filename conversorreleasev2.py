@@ -195,7 +195,7 @@ elif pagina == "Executar Conversão com Estoque":
         "lote": ""
     }])
 
-        edited = st.data_editor(
+    edited = st.data_editor(
             dados_iniciais,
             num_rows="dynamic",
             use_container_width=True,
