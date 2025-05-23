@@ -178,8 +178,6 @@ elif pagina == "Importar Produtos (Planilha)":
             salvar_dados(dados)
             st.success(f"{len(novos)} produtos importados!")
 
-            st.write("Modelo de planilha: Descrição Prod.	Cod. Caixa	Qtd. Display por Caixa	Cod. Display")
-
 
 #ABA DE CONVERSÃO
 
