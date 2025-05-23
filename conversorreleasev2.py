@@ -60,6 +60,7 @@ def gerar_chave_nfe():
 
 def gerar_numped():
     return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    numero_pedido = gerar_numped()
 
 def gerar_json_saida(codprod, qtde, lote):
     return {
@@ -198,13 +199,15 @@ elif pagina == "Executar Conversão com Estoque":
         dados_iniciais,
         num_rows="dynamic",
         use_container_width=True,
-        hide_index=True,
+        hide_index=False,  # ❗ agora o índice aparece
+        column_order=["cod_caixa", "qtd_cx", "lote"],
         column_config={
             "cod_caixa": st.column_config.TextColumn(label="Código a ser convertido"),
             "qtd_cx": st.column_config.NumberColumn(label="Quant.", min_value=1),
             "lote": st.column_config.TextColumn(label="Lote escolhido")
         }
     )
+edited.index.name = "Linha"
 
     resultados_processados = []
     for idx in edited.index:
@@ -286,7 +289,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "CGCEMINF": CNPJ_DESTINO,
                     "OBSPED": "",
                     "OBSROM": "",
-                    "NUMPEDCLI": gerar_numped(),
+                    "NUMPEDCLI": numero_pedido,
                     "VLTOTPED": "1,00",
                     "CGCDEST": "",
                     "NOMEDEST": "",
@@ -318,7 +321,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "SERIENF": "1",
                     "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
                     "VLTOTALNF": "1.00",
-                    "NUMEPEDCLI": gerar_numped(),
+                    "NUMEPEDCLI": numero_pedido,
                     "CHAVENF": gerar_chave_nfe(),
                     "ITENS": itens_processados
                 }
