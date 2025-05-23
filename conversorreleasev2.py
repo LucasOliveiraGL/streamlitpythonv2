@@ -168,7 +168,7 @@ elif pagina == "Importar Produtos (Planilha)":
     substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
     if arq and st.button("Importar"):
         df = pd.read_excel(arq, dtype=str)
-        obrig = ["Descrição Prod.","Cod. Caixa","Qtd. Display por Caixa","Cod. Display"]
+        obrig = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display"]
         if not all(c in df.columns for c in obrig):
             st.error("Colunas obrigatórias ausentes.")
         else:
