@@ -57,6 +57,9 @@ def salvar_dados(lista):
 def gerar_chave_nfe():
     return ''.join([str(random.randint(0, 9)) for _ in range(44)])
 
+def gerar_numped():
+    return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
 def gerar_json_saida(codprod, qtde, lote):
     return {
         "CORPEM_ERP_DOC_SAI": {
@@ -102,7 +105,7 @@ def gerar_json_entrada(itens):
             "SERIENF": "1",
             "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
             "VLTOTALNF": "1.00",
-            "NUMEPEDCLI": "ENTRADA_CONVERSAO",
+            "NUMEPEDCLI": gerar_numped(),
             "CHAVENF": gerar_chave_nfe(),
             "ITENS": itens_processados
         }
