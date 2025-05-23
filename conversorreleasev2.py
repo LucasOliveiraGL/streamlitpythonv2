@@ -176,12 +176,12 @@ elif pagina == "Executar Conversão com Estoque":
     df_estoque.columns = df_estoque.columns.str.strip()
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    # Nomes exatos conforme relatório
-    col_merc = "Cod. Merc."
+    # Colunas exatas do relatório
+    col_merc = "Cod. Produto"
     col_lote = "Lote Fabr."
 
     if col_merc not in df_estoque.columns or col_lote not in df_estoque.columns:
-        st.error("❌ Colunas 'Cod. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
+        st.error("❌ Colunas 'Cod. Produto' ou 'Lote Fabr.' não encontradas no relatório.")
         st.stop()
 
     st.markdown("### ✏️ Preencha abaixo as conversões")
@@ -266,18 +266,20 @@ elif pagina == "Executar Conversão com Estoque":
                 erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_caixa}.")
                 continue
 
-            jsons_saida.append({
-                "NUMSEQ": str(len(jsons_saida) + 1),
-                "CODPROD": cod_display,
-                "QTPROD": str(qtd_disp),
-                "VLUNIT": "1,00",
-                "LOTEFAB": lote
-            })
-
+            # JSON de ENTRADA → quantidade convertida (display)
             itens_entrada.append({
                 "NUMSEQ": str(len(itens_entrada) + 1),
+                "CODPROD": cod_display,
+                "QTPROD": str(qtd_disp)
+            })
+
+            # JSON de SAÍDA → quantidade original (caixa)
+            jsons_saida.append({
+                "NUMSEQ": str(len(jsons_saida) + 1),
                 "CODPROD": cod_caixa,
-                "QTPROD": str(qtd_cx)
+                "QTPROD": str(qtd_cx),
+                "VLUNIT": "1,00",
+                "LOTEFAB": lote
             })
 
         if erros:
