@@ -341,8 +341,8 @@ elif pagina == "Executar Conversão com Estoque":
 
 # 🔁 Bloco de envio separado para funcionar mesmo após reload
         if "json_saida" in st.session_state and "json_entrada" in st.session_state:
-    json_saida = st.session_state["json_saida"]
-    json_entrada = st.session_state["json_entrada"]
+            json_saida = st.session_state["json_saida"]
+            json_entrada = st.session_state["json_entrada"]
 
     st.subheader("📦 Resumo - JSON de Saída")
     for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
