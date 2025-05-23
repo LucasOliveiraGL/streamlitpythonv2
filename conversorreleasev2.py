@@ -172,12 +172,11 @@ elif pagina == "Executar Conversão com Estoque":
     if not relatorio:
         st.stop()
 
-    # Lê o Excel e normaliza os nomes das colunas
     df_estoque = pd.read_excel(relatorio, dtype=str)
     df_estoque.columns = df_estoque.columns.str.strip()
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    # Mapeamento dinâmico de colunas
+    # Mapeamento dinâmico
     col_merc = next((col for col in df_estoque.columns if "merc" in col.lower()), None)
     col_lote = next((col for col in df_estoque.columns if "lote" in col.lower()), None)
 
@@ -205,7 +204,7 @@ elif pagina == "Executar Conversão com Estoque":
         }
     )
 
-    # Preenchimento e cálculo oculto
+    # Processa cada linha
     resultados_processados = []
 
     for idx in edited.index:
@@ -238,6 +237,11 @@ elif pagina == "Executar Conversão com Estoque":
     erros = []
 
     if st.button("Gerar JSONs"):
+
+        # Normaliza colunas de estoque para evitar erro de espaço/capitalização
+        df_estoque[col_merc] = df_estoque[col_merc].str.strip().str.upper()
+        df_estoque[col_lote] = df_estoque[col_lote].str.strip().str.upper()
+
         for item in resultados_processados:
             cod_display = item["cod_display"]
             cod_caixa = item["cod_caixa"]
@@ -250,8 +254,8 @@ elif pagina == "Executar Conversão com Estoque":
                 continue
 
             filtro = df_estoque[
-                (df_estoque[col_merc].str.strip().str.upper() == cod_display) &
-                (df_estoque[col_lote].str.strip().str.upper() == lote)
+                (df_estoque[col_merc] == cod_display) &
+                (df_estoque[col_lote] == lote)
             ]
 
             if filtro.empty:
@@ -277,7 +281,6 @@ elif pagina == "Executar Conversão com Estoque":
             st.code("\n".join(erros))
 
         if jsons_saida and itens_entrada:
-            # JSON de saída
             json_saida = {
                 "CORPEM_ERP_DOC_SAI": {
                     "CGCCLIWMS": CNPJ_DESTINO,
@@ -292,7 +295,6 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            # JSON de entrada
             total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
             itens_processados = []
             for i in itens_entrada:
