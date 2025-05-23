@@ -281,7 +281,7 @@ elif pagina == "Executar Conversão com Estoque":
                 "CODPROD": cod_caixa,
                 "QTPROD": str(qtd_cx),
                 "VLUNIT": "1,00",
-                "LOTEFAB": lote
+                "LOTFAB": lote
             })
 
         if erros:
