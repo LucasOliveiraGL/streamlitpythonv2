@@ -159,7 +159,7 @@ if pagina == "Cadastro de Produto":
         df.columns = ["Nome", "Código da Caixa", "Código do Display", "Displays por Caixa"]
         st.dataframe_editor(df, use_container_width=True)
     else:
-        st.info("Nenhum produto cadastrado ainda.")
+        st.error("Nenhum produto cadastrado ainda.")
         
 
 elif pagina == "Importar Produtos (Planilha)":
