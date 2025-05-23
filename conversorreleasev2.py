@@ -333,5 +333,5 @@ elif pagina == "Executar Conversão com Estoque":
 
             st.subheader("📦 JSON de Saída")
             st.code(json.dumps(json_saida, indent=4), language="json")
-            st.subheader("📥 JSON de Entrada (R$ 1,00 total)")
+            st.subheader("📥 JSON de Entrada")
             st.code(json.dumps(json_entrada, indent=4), language="json")
