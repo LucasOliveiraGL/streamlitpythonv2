@@ -76,7 +76,7 @@ def gerar_json_saida(codprod, qtde, lote):
                 "CODPROD": codprod,
                 "QTPROD": str(qtde),
                 "VLUNIT": "1,00",
-                "LOTEFAB": lote
+                "LOTFAB": lote
             }]
         }
     }
