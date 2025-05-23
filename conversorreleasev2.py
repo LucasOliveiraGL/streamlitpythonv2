@@ -131,6 +131,7 @@ dados = carregar_dados()
 
 if pagina == "Cadastro de Produto":
     st.title("📦 Cadastro de Produto")
+
     with st.form("cadastro_produto"):
         produto = st.text_input("Nome do Produto")
         col1, col2 = st.columns(2)
@@ -139,6 +140,7 @@ if pagina == "Cadastro de Produto":
         with col2:
             cod_display = st.text_input("Código do Display")
         qtd_disp_cx = st.number_input("Displays por Caixa", min_value=1, step=1)
+
         if st.form_submit_button("Salvar"):
             dados.append({
                 "produto": produto,
@@ -150,16 +152,15 @@ if pagina == "Cadastro de Produto":
             st.success("Produto salvo com sucesso!")
             st.rerun()
 
-    # ✅ Exibir sempre que a página for aberta
-        if dados:
-            st.markdown("### 📋 Produtos Cadastrados")
-            df = pd.DataFrame(dados)
-            df.columns = ["Nome", "Código da Caixa", "Código do Display", "Displays por Caixa"]
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("Nenhum produto cadastrado ainda.")
-
-
+    # ✅ Esta parte deve ficar FORA do `with st.form(...)`
+    if dados:
+        st.markdown("### 📋 Produtos Cadastrados")
+        df = pd.DataFrame(dados)
+        df.columns = ["Nome", "Código da Caixa", "Código do Display", "Displays por Caixa"]
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Nenhum produto cadastrado ainda.")
+        
 
 elif pagina == "Importar Produtos (Planilha)":
     st.title("📥 Importar Produtos via Planilha")
