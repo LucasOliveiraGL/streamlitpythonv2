@@ -173,14 +173,26 @@ elif pagina == "Executar Conversão com Estoque":
         st.stop()
 
     df_estoque = pd.read_excel(relatorio, dtype=str)
+    df_estoque.columns = df_estoque.columns.str.strip()  # remove espaços extras
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
+
+    # 🧠 Mapeamento dinâmico dos nomes das colunas
+    col_merc = next((col for col in df_estoque.columns if "merc" in col.lower()), None)
+    col_lote = next((col for col in df_estoque.columns if "lote" in col.lower()), None)
+
+    if not col_merc or not col_lote:
+        st.error("❌ Colunas 'Cód. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
+        st.stop()
 
     st.markdown("### ✏️ Preencha abaixo as conversões")
 
     dados_iniciais = pd.DataFrame([{
         "cod_caixa": "",
         "qtd_cx": 1,
-        "lote": ""
+        "cod_display": "",
+        "qtd_disp": 1,
+        "lote": "",
+        "descricao": ""
     }])
 
     edited = st.data_editor(
@@ -198,6 +210,7 @@ elif pagina == "Executar Conversão com Estoque":
         }
     )
 
+    # 🔁 Preenchimento automático
     for idx in edited.index:
         valor_raw = edited.at[idx, "cod_caixa"]
         cod_cx = str(valor_raw).strip().upper() if valor_raw else ""
@@ -218,25 +231,25 @@ elif pagina == "Executar Conversão com Estoque":
 
     if st.button("Gerar JSONs"):
         for idx, row in edited.iterrows():
-            cod_display = str(row["cod_display"]).strip().upper() if row["cod_display"] else ""
-            cod_caixa = str(row["cod_caixa"]).strip().upper() if row["cod_caixa"] else ""
-            lote = str(row["lote"]).strip() if row["lote"] else ""
+            cod_display = str(row.get("cod_display", "")).strip().upper()
+            cod_caixa = str(row.get("cod_caixa", "")).strip().upper()
+            lote = str(row.get("lote", "")).strip().upper()
             qtd_disp = int(row["qtd_disp"])
             qtd_cx = int(row["qtd_cx"])
 
-            # Verifica se o lote está disponível para o código DISPLAY, não CAIXA
+            if not cod_display or not cod_caixa or not lote:
+                erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
+                continue
+
+            # ✅ Verificação segura com nomes de colunas dinâmicos
             filtro = df_estoque[
-                    (df_estoque["Cód. Merc."].str.strip().str.upper() == cod_display) &
-                    (df_estoque["Lote Fabr."].str.strip().str.upper() == lote)
+                (df_estoque[col_merc].str.strip().str.upper() == cod_display) &
+                (df_estoque[col_lote].str.strip().str.upper() == lote)
             ]
 
             if filtro.empty:
                 erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
-            continue
-
-            if not cod_display or not cod_caixa or not lote:
-                erros.append(f"Linha {idx+1}: Campos obrigatórios ausentes.")
-            continue
+                continue
 
             jsons_saida.append({
                 "NUMSEQ": str(len(jsons_saida) + 1),
@@ -263,5 +276,6 @@ elif pagina == "Executar Conversão com Estoque":
 
             st.subheader("📦 JSON de Saída")
             st.code(json.dumps(json_saida, indent=4), language="json")
+
             st.subheader("📥 JSON de Entrada (R$ 1,00 total)")
             st.code(json.dumps(json_entrada, indent=4), language="json")
