@@ -161,25 +161,6 @@ if pagina == "Cadastro de Produto":
         st.error("Nenhum produto cadastrado ainda.")
         
 
-elif pagina == "Importar Produtos (Planilha)":
-    st.title("📥 Importar Produtos via Planilha")
-    arq = st.file_uploader("Selecione um .xlsx", type="xlsx")
-    substituir = st.checkbox("❗ Substituir todos os produtos existentes", value=False)
-    if arq and st.button("Importar"):
-        df = pd.read_excel(arq, dtype=str)
-        obrig = ["produto", "cod_caixa", "qtd_displays_caixa", "cod_display"]
-        if not all(c in df.columns for c in obrig):
-            st.error("Colunas obrigatórias ausentes.")
-        else:
-            df["qtd_displays_caixa"] = df["qtd_displays_caixa"].astype(int)
-            novos = df.to_dict(orient="records")
-            dados = novos if substituir else dados + novos
-            salvar_dados(dados)
-            st.success(f"{len(novos)} produtos importados!")
-
-
-#ABA DE CONVERSÃO
-
 elif pagina == "Executar Conversão com Estoque":
     st.title("🔁 Conversão por Lote com Estoque")
     relatorio = st.file_uploader("📄 Relatório de Estoque (.xlsx)", type="xlsx")
@@ -309,8 +290,8 @@ elif pagina == "Executar Conversão com Estoque":
             total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
             itens_processados = []
             for i in itens_entrada:
-                proporcional = (float(i["QTPROD"]) / total_qtd)
-                valor_item = round(proporcional, 4)
+                proporcional = float(i["QTPROD"]) / total_qtd
+                valor_item = round(proporcional, 6)  # mais precisão
                 itens_processados.append({
                     "NUMSEQ": i["NUMSEQ"],
                     "CODPROD": i["CODPROD"],
@@ -338,6 +319,7 @@ elif pagina == "Executar Conversão com Estoque":
 
             st.session_state["json_saida"] = json_saida
             st.session_state["json_entrada"] = json_entrada
+
 
 # 🔁 Bloco de envio separado para funcionar mesmo após reload
 if "json_saida" in st.session_state and "json_entrada" in st.session_state:
