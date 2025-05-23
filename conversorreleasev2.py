@@ -172,6 +172,7 @@ elif pagina == "Executar Conversão com Estoque":
     if not relatorio:
         st.stop()
 
+    # Lê e normaliza colunas
     df_estoque = pd.read_excel(relatorio, dtype=str)
     df_estoque.columns = df_estoque.columns.str.strip()
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
@@ -181,7 +182,7 @@ elif pagina == "Executar Conversão com Estoque":
     col_lote = next((col for col in df_estoque.columns if "lote" in col.lower()), None)
 
     if not col_merc or not col_lote:
-        st.error("❌ Colunas 'Cód. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
+        st.error("❌ Colunas 'Cód. Merc.' ou 'Lote Fabr.' não encontradas.")
         st.stop()
 
     st.markdown("### ✏️ Preencha abaixo as conversões")
@@ -204,23 +205,21 @@ elif pagina == "Executar Conversão com Estoque":
         }
     )
 
-    # Processa cada linha
     resultados_processados = []
 
     for idx in edited.index:
-        cod_cx = str(edited.at[idx, "cod_caixa"]).strip().upper() if edited.at[idx, "cod_caixa"] else ""
-        qtd_cx = int(edited.at[idx, "qtd_cx"])
-        lote = str(edited.at[idx, "lote"]).strip().upper() if edited.at[idx, "lote"] else ""
+        raw_cod = edited.at[idx, "cod_caixa"]
+        raw_qtd = edited.at[idx, "qtd_cx"]
+        raw_lote = edited.at[idx, "lote"]
+
+        cod_cx = str(raw_cod).strip().upper() if pd.notna(raw_cod) else ""
+        qtd_cx = int(raw_qtd) if pd.notna(raw_qtd) else 0
+        lote = str(raw_lote).strip().upper() if pd.notna(raw_lote) else ""
 
         produto = next((p for p in dados if cod_cx == p["cod_caixa"]), None)
-        if produto:
-            cod_display = produto["cod_display"]
-            descricao = produto["produto"]
-            qtd_disp = qtd_cx * int(produto["qtd_displays_caixa"])
-        else:
-            cod_display = ""
-            descricao = ""
-            qtd_disp = 0
+        cod_display = produto["cod_display"] if produto else ""
+        descricao = produto["produto"] if produto else ""
+        qtd_disp = qtd_cx * int(produto["qtd_displays_caixa"]) if produto else 0
 
         resultados_processados.append({
             "linha": idx + 1,
@@ -237,8 +236,6 @@ elif pagina == "Executar Conversão com Estoque":
     erros = []
 
     if st.button("Gerar JSONs"):
-
-        # Normaliza colunas de estoque para evitar erro de espaço/capitalização
         df_estoque[col_merc] = df_estoque[col_merc].str.strip().str.upper()
         df_estoque[col_lote] = df_estoque[col_lote].str.strip().str.upper()
 
