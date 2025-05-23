@@ -322,22 +322,26 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            # Exibir resumo
-            st.subheader("📦 Resumo - JSON de Saída")
-            for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
-                st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
+            if "json_saida" in st.session_state and "json_entrada" in st.session_state:
+    json_saida = st.session_state["json_saida"]
+    json_entrada = st.session_state["json_entrada"]
 
-            st.subheader("📥 Resumo - JSON de Entrada")
-            for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
-                st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
+    st.subheader("📦 Resumo - JSON de Saída")
+    for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
+        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
 
-            # Botão de envio
-            if st.button("📤 Enviar JSONs para CORPEM"):
-                url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
-                headers = {"Content-Type": "application/json"}
-                r1 = requests.post(url, headers=headers, json=json_saida)
-                r2 = requests.post(url, headers=headers, json=json_entrada)
-                if r1.ok and r2.ok:
-                    st.success("✅ JSONs enviados com sucesso!")
-                else:
-                    st.error(f"Erro no envio:\nSaída: {r1.status_code}\nEntrada: {r2.status_code}")
+    st.subheader("📥 Resumo - JSON de Entrada")
+    for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
+        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
+
+    # Botão para enviar
+    if st.button("📤 Enviar JSONs para CORPEM"):
+        url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
+        headers = {"Content-Type": "application/json"}
+        r1 = requests.post(url, headers=headers, json=json_saida)
+        r2 = requests.post(url, headers=headers, json=json_entrada)
+
+        if r1.ok and r2.ok:
+            st.success("✅ JSONs enviados com sucesso!")
+        else:
+            st.error(f"Erro no envio:\nSaída: {r1.status_code}\nEntrada: {r2.status_code}")
