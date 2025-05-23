@@ -295,7 +295,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "CGCEMINF": CNPJ_DESTINO,
                     "OBSPED": "",
                     "OBSROM": "",
-                    "NUMPEDCLI": "CONVERSAO_DISPLAY_CAIXA",
+                    "NUMPEDCLI": gerar_numped(),
                     "VLTOTPED": "1,00",
                     "CGCDEST": "",
                     "NOMEDEST": "",
