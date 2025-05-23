@@ -172,12 +172,10 @@ elif pagina == "Executar Conversão com Estoque":
     if not relatorio:
         st.stop()
 
-    # Lê e normaliza colunas
     df_estoque = pd.read_excel(relatorio, dtype=str)
     df_estoque.columns = df_estoque.columns.str.strip()
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
-    # Mapeamento dinâmico
     col_merc = next((col for col in df_estoque.columns if "merc" in col.lower()), None)
     col_lote = next((col for col in df_estoque.columns if "lote" in col.lower()), None)
 
@@ -212,7 +210,16 @@ elif pagina == "Executar Conversão com Estoque":
         raw_qtd = edited.at[idx, "qtd_cx"]
         raw_lote = edited.at[idx, "lote"]
 
-        cod_cx = str(raw_cod).strip().upper() if pd.notna(raw_cod) else ""
+        # Proteção contra truncamento (ex: PA-164200 virando PA-4200)
+        if pd.isna(raw_cod):
+            cod_cx = ""
+        elif isinstance(raw_cod, str):
+            cod_cx = raw_cod.strip().upper()
+        elif isinstance(raw_cod, (int, float)):
+            cod_cx = f"PA-{int(raw_cod)}"
+        else:
+            cod_cx = str(raw_cod).strip().upper()
+
         qtd_cx = int(raw_qtd) if pd.notna(raw_qtd) else 0
         lote = str(raw_lote).strip().upper() if pd.notna(raw_lote) else ""
 
