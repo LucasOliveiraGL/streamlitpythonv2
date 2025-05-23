@@ -341,12 +341,58 @@ if "json_saida" in st.session_state and "json_entrada" in st.session_state:
     for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
         st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
 
-    if st.button("📤 Enviar JSONs para CORPEM"):
-        url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
-        headers = {"Content-Type": "application/json"}
-        r1 = requests.post(url, headers=headers, json=json_saida)
-        r2 = requests.post(url, headers=headers, json=json_entrada)
-        if r1.ok and r2.ok:
-            st.success("✅ JSONs enviados com sucesso!")
+if st.button("📤 Enviar JSONs para CORPEM"):
+    import json
+    import io
+    from googleapiclient.http import MediaIoBaseUpload
+
+    url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
+    headers = {"Content-Type": "application/json"}
+
+    r1 = requests.post(url, headers=headers, json=json_saida)
+    r2 = requests.post(url, headers=headers, json=json_entrada)
+
+    st.subheader("🔍 Resposta da API")
+    st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
+
+    if r1.ok and r2.ok:
+        st.success("✅ JSONs enviados com sucesso!")
+
+        # Gerar conteúdo JSON único
+        json_final = {
+            "saida": json_saida,
+            "entrada": json_entrada,
+            "resposta_saida": r1.text,
+            "resposta_entrada": r2.text,
+            "enviado_em": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        }
+
+        # Conectar ao Drive e garantir pasta
+        service = conectar_drive()
+
+        # Buscar pasta log_jsons
+        pasta_id = None
+        resultado = service.files().list(q="name='log_jsons' and mimeType='application/vnd.google-apps.folder' and trashed=false", fields="files(id)").execute()
+        itens = resultado.get('files', [])
+        if itens:
+            pasta_id = itens[0]['id']
         else:
-            st.error(f"Erro no envio:\nSaída: {r1.status_code}\nEntrada: {r2.status_code}")
+            meta = {'name': 'log_jsons', 'mimeType': 'application/vnd.google-apps.folder'}
+            pasta_id = service.files().create(body=meta, fields='id').execute().get("id")
+
+        # Nome do arquivo
+        nome_arquivo = f"log_json_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+        # Upload do arquivo
+        buffer = io.BytesIO(json.dumps(json_final, indent=4, ensure_ascii=False).encode("utf-8"))
+        media = MediaIoBaseUpload(buffer, mimetype='application/json')
+        service.files().create(
+            body={"name": nome_arquivo, "parents": [pasta_id]},
+            media_body=media,
+            fields="id"
+        ).execute()
+
+        st.success(f"📁 JSON salvo em log_jsons como `{nome_arquivo}`.")
+    else:
+        st.error("❌ Falha no envio dos JSONs.")
+
