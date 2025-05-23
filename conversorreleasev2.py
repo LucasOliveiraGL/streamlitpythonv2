@@ -151,14 +151,13 @@ if pagina == "Cadastro de Produto":
             st.rerun()
 
     # ✅ Exibir sempre que a página for aberta
-    if dados:
-        st.markdown("### 📋 Produtos Cadastrados")
-        for i, item in enumerate(dados, start=1):
-            st.markdown(
-                f"{i}. **{item['produto']}** | Caixa: `{item['cod_caixa']}` | Display: `{item['cod_display']}` | Displays por caixa: `{item['qtd_displays_caixa']}`"
-            )
-    else:
-        st.info("Nenhum produto cadastrado ainda.")
+        if dados:
+            st.markdown("### 📋 Produtos Cadastrados")
+            df = pd.DataFrame(dados)
+            df.columns = ["Nome", "Código da Caixa", "Código do Display", "Displays por Caixa"]
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("Nenhum produto cadastrado ainda.")
 
 
 
