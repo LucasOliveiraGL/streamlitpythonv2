@@ -210,7 +210,6 @@ elif pagina == "Executar Conversão com Estoque":
         raw_qtd = edited.at[idx, "qtd_cx"]
         raw_lote = edited.at[idx, "lote"]
 
-        # Proteção contra truncamento (ex: PA-164200 virando PA-4200)
         if pd.isna(raw_cod):
             cod_cx = ""
         elif isinstance(raw_cod, str):
@@ -247,8 +246,8 @@ elif pagina == "Executar Conversão com Estoque":
         df_estoque[col_lote] = df_estoque[col_lote].str.strip().str.upper()
 
         for item in resultados_processados:
-            cod_display = item["cod_display"]
             cod_caixa = item["cod_caixa"]
+            cod_display = item["cod_display"]
             lote = item["lote"]
             qtd_disp = item["qtd_disp"]
             qtd_cx = item["qtd_cx"]
@@ -258,12 +257,12 @@ elif pagina == "Executar Conversão com Estoque":
                 continue
 
             filtro = df_estoque[
-                (df_estoque[col_merc] == cod_display) &
+                (df_estoque[col_merc] == cod_caixa) &
                 (df_estoque[col_lote] == lote)
             ]
 
             if filtro.empty:
-                erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_display}.")
+                erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_caixa}.")
                 continue
 
             jsons_saida.append({
