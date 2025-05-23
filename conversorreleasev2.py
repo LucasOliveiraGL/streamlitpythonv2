@@ -177,11 +177,11 @@ elif pagina == "Executar Conversão com Estoque":
     df_estoque["Qt. Disp."] = df_estoque["Qt. Disp."].str.replace(",", ".").astype(float)
 
     # Colunas exatas do relatório
-    col_merc = "Cod. Produto"
+    col_merc = "Cod. Merc."
     col_lote = "Lote Fabr."
 
     if col_merc not in df_estoque.columns or col_lote not in df_estoque.columns:
-        st.error("❌ Colunas 'Cod. Produto' ou 'Lote Fabr.' não encontradas no relatório.")
+        st.error("❌ Colunas 'Cod. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
         st.stop()
 
     st.markdown("### ✏️ Preencha abaixo as conversões")
