@@ -155,9 +155,9 @@ if pagina == "Cadastro de Produto":
     # ✅ Esta parte deve ficar FORA do `with st.form(...)`
     if dados:
         st.markdown("### 📋 Produtos Cadastrados")
-        df = pd.DataFrame(dados)
+        df = pd.DataFrame_editor(dados)
         df.columns = ["Nome", "Código da Caixa", "Código do Display", "Displays por Caixa"]
-        st.dataframe_editor(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True)
     else:
         st.error("Nenhum produto cadastrado ainda.")
         
