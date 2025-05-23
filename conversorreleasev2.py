@@ -195,19 +195,19 @@ elif pagina == "Executar Conversão com Estoque":
         "lote": ""
     }])
 
-    edited = st.data_editor(
-        dados_iniciais,
-        num_rows="dynamic",
-        use_container_width=True,
-        hide_index=False,  # ❗ agora o índice aparece
-        column_order=["cod_caixa", "qtd_cx", "lote"],
-        column_config={
-            "cod_caixa": st.column_config.TextColumn(label="Código a ser convertido"),
-            "qtd_cx": st.column_config.NumberColumn(label="Quant.", min_value=1),
-            "lote": st.column_config.TextColumn(label="Lote escolhido")
-        }
-    )
-edited.index.name = "Linha"
+        edited = st.data_editor(
+            dados_iniciais,
+            num_rows="dynamic",
+            use_container_width=True,
+            hide_index=False,  # ❗ agora o índice aparece
+            column_order=["cod_caixa", "qtd_cx", "lote"],
+            column_config={
+                "cod_caixa": st.column_config.TextColumn(label="Código a ser convertido"),
+                "qtd_cx": st.column_config.NumberColumn(label="Quant.", min_value=1),
+                "lote": st.column_config.TextColumn(label="Lote escolhido")
+            }
+        )
+    edited.index.name = "Linha"
 
     resultados_processados = []
     for idx in edited.index:
