@@ -369,8 +369,8 @@ elif pagina == "Executar Conversão com Estoque":
             r1 = requests.post(url, headers=headers, json=json_saida)
             r2 = requests.post(url, headers=headers, json=json_entrada)
 
-            st.subheader("🔍 Resposta da API")
-            st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
+            #st.subheader("🔍 Resposta da API")
+            #st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
 
             if r1.ok and r2.ok:
                 st.success("✅ JSONs enviados com sucesso!")
