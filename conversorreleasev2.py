@@ -231,7 +231,7 @@ elif pagina == "Executar Conversão com Estoque":
             ]
 
             if filtro.empty:
-            erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
+                erros.append(f"Linha {idx+1}: Lote {lote} não disponível para código {cod_display}.")
             continue
 
             if not cod_display or not cod_caixa or not lote:
