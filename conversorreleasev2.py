@@ -194,7 +194,7 @@ elif pagina == "Executar Conversão com Estoque":
     col_merc = "Cód. Merc."
     col_lote = "Lote Fabr."
     numero_pedido = gerar_numped()
-    
+
     if col_merc not in df_estoque.columns or col_lote not in df_estoque.columns:
         st.error("❌ Colunas 'Cód. Merc.' ou 'Lote Fabr.' não encontradas no relatório.")
         st.stop()
@@ -208,17 +208,17 @@ elif pagina == "Executar Conversão com Estoque":
     }])
 
     edited = st.data_editor(
-            dados_iniciais,
-            num_rows="dynamic",
-            use_container_width=True,
-            hide_index=False,  # ❗ agora o índice aparece
-            column_order=["cod_caixa", "qtd_cx", "lote"],
-            column_config={
-                "cod_caixa": st.column_config.TextColumn(label="Código a ser convertido"),
-                "qtd_cx": st.column_config.NumberColumn(label="Quant.", min_value=1),
-                "lote": st.column_config.TextColumn(label="Lote escolhido")
-            }
-        )
+        dados_iniciais,
+        num_rows="dynamic",
+        use_container_width=True,
+        hide_index=False,
+        column_order=["cod_caixa", "qtd_cx", "lote"],
+        column_config={
+            "cod_caixa": st.column_config.TextColumn(label="Código a ser convertido"),
+            "qtd_cx": st.column_config.NumberColumn(label="Quant.", min_value=1),
+            "lote": st.column_config.TextColumn(label="Lote escolhido")
+        }
+    )
     edited.index.name = "Linha"
 
     resultados_processados = []
@@ -265,7 +265,6 @@ elif pagina == "Executar Conversão com Estoque":
                 erros.append(f"Linha {item['linha']}: Campos obrigatórios ausentes.")
                 continue
 
-            # IMPORTANTE: consulta feita usando o código digitado (caixa)
             filtro = df_estoque[
                 (df_estoque[col_merc] == cod_caixa) & 
                 (df_estoque[col_lote] == lote)
@@ -275,14 +274,12 @@ elif pagina == "Executar Conversão com Estoque":
                 erros.append(f"Linha {item['linha']}: Lote {lote} não disponível para código {cod_caixa}.")
                 continue
 
-            # ENTRADA → quantidade convertida (display)
             itens_entrada.append({
                 "NUMSEQ": str(len(itens_entrada) + 1),
                 "CODPROD": cod_display,
                 "QTPROD": str(qtd_disp)
             })
 
-            # SAÍDA → quantidade original (caixa)
             jsons_saida.append({
                 "NUMSEQ": str(len(jsons_saida) + 1),
                 "CODPROD": cod_caixa,
@@ -339,11 +336,10 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            # Salvar para uso posterior
             st.session_state["json_saida"] = json_saida
             st.session_state["json_entrada"] = json_entrada
 
-            # Exibir resumo e botão de envio (dentro da página correta)
+# 🔁 Bloco de envio separado para funcionar mesmo após reload
 if "json_saida" in st.session_state and "json_entrada" in st.session_state:
     json_saida = st.session_state["json_saida"]
     json_entrada = st.session_state["json_entrada"]
@@ -402,4 +398,3 @@ if "json_saida" in st.session_state and "json_entrada" in st.session_state:
             st.success(f"📁 JSON salvo em log_jsons como `{nome_arquivo}`.")
         else:
             st.error("❌ Falha no envio dos JSONs.")
-
