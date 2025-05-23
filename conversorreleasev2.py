@@ -291,7 +291,7 @@ elif pagina == "Executar Conversão com Estoque":
             itens_processados = []
             for i in itens_entrada:
                 proporcional = float(i["QTPROD"]) / total_qtd
-                valor_item = round(proporcional, 6)  # mais precisão
+                valor_item = round(proporcional, 6)
                 itens_processados.append({
                     "NUMSEQ": i["NUMSEQ"],
                     "CODPROD": i["CODPROD"],
@@ -320,64 +320,27 @@ elif pagina == "Executar Conversão com Estoque":
             st.session_state["json_saida"] = json_saida
             st.session_state["json_entrada"] = json_entrada
 
+    # EXIBIR RESUMO + BOTÃO DE ENVIO
+    if "json_saida" in st.session_state and "json_entrada" in st.session_state:
+        json_saida = st.session_state["json_saida"]
+        json_entrada = st.session_state["json_entrada"]
 
-# 🔁 Bloco de envio separado para funcionar mesmo após reload
-if "json_saida" in st.session_state and "json_entrada" in st.session_state:
-    json_saida = st.session_state["json_saida"]
-    json_entrada = st.session_state["json_entrada"]
+        st.subheader("📦 Resumo - JSON de Saída")
+        for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
+            st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
 
-    st.subheader("📦 Resumo - JSON de Saída")
-    for item in json_saida.get("CORPEM_ERP_DOC_SAI", {}).get("ITENS", []):
-        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Lote:** `{item['LOTFAB']}`")
+        st.subheader("📥 Resumo - JSON de Entrada")
+        for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
+            st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
 
-    st.subheader("📥 Resumo - JSON de Entrada")
-    for item in json_entrada.get("CORPEM_ERP_DOC_ENT", {}).get("ITENS", []):
-        st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}`")
+        if st.button("📤 Enviar JSONs para CORPEM"):
+            url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
+            headers = {"Content-Type": "application/json"}
+            r1 = requests.post(url, headers=headers, json=json_saida)
+            r2 = requests.post(url, headers=headers, json=json_entrada)
 
-    if st.button("📤 Enviar JSONs para CORPEM"):
-        import json, io
-        from googleapiclient.http import MediaIoBaseUpload
+            st.subheader("🔍 Resposta da API")
+            st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
 
-        url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
-        headers = {"Content-Type": "application/json"}
-
-        r1 = requests.post(url, headers=headers, json=json_saida)
-        r2 = requests.post(url, headers=headers, json=json_entrada)
-
-        st.subheader("🔍 Resposta da API")
-        st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
-
-        if r1.ok and r2.ok:
-            st.success("✅ JSONs enviados com sucesso!")
-
-            json_final = {
-                "saida": json_saida,
-                "entrada": json_entrada,
-                "resposta_saida": r1.text,
-                "resposta_entrada": r2.text,
-                "enviado_em": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            }
-
-            service = conectar_drive()
-            resultado = service.files().list(
-                q="name='log_jsons' and mimeType='application/vnd.google-apps.folder' and trashed=false",
-                fields="files(id)").execute()
-            itens = resultado.get('files', [])
-            if itens:
-                pasta_id = itens[0]['id']
-            else:
-                meta = {'name': 'log_jsons', 'mimeType': 'application/vnd.google-apps.folder'}
-                pasta_id = service.files().create(body=meta, fields='id').execute().get("id")
-
-            nome_arquivo = f"log_json_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            buffer = io.BytesIO(json.dumps(json_final, indent=4, ensure_ascii=False).encode("utf-8"))
-            media = MediaIoBaseUpload(buffer, mimetype='application/json')
-            service.files().create(
-                body={"name": nome_arquivo, "parents": [pasta_id]},
-                media_body=media,
-                fields="id"
-            ).execute()
-
-            st.success(f"📁 JSON salvo em log_jsons como `{nome_arquivo}`.")
-        else:
-            st.error("❌ Falha no envio dos JSONs.")
+            if r1.ok and r2.ok:
+                st.success("✅ JSONs enviados com sucesso!")
