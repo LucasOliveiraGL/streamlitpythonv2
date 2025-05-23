@@ -249,6 +249,7 @@ elif pagina == "Executar Conversão com Estoque":
                 erros.append(f"Linha {item['linha']}: Campos obrigatórios ausentes.")
                 continue
 
+            # IMPORTANTE: consulta feita usando o código digitado (caixa)
             filtro = df_estoque[
                 (df_estoque[col_merc] == cod_caixa) & 
                 (df_estoque[col_lote] == lote)
@@ -322,9 +323,14 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            if "json_saida" in st.session_state and "json_entrada" in st.session_state:
-                json_saida = st.session_state["json_saida"]
-                json_entrada = st.session_state["json_entrada"]
+            # Salvar para uso posterior
+            st.session_state["json_saida"] = json_saida
+            st.session_state["json_entrada"] = json_entrada
+
+# Exibir resumo e botão de envio (fora do botão "Gerar JSONs")
+if "json_saida" in st.session_state and "json_entrada" in st.session_state:
+    json_saida = st.session_state["json_saida"]
+    json_entrada = st.session_state["json_entrada"]
 
     st.subheader("📦 Resumo - JSON de Saída")
     for item in json_saida["CORPEM_ERP_DOC_SAI"]["ITENS"]:
@@ -334,13 +340,11 @@ elif pagina == "Executar Conversão com Estoque":
     for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
         st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
 
-    # Botão para enviar
     if st.button("📤 Enviar JSONs para CORPEM"):
         url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
         headers = {"Content-Type": "application/json"}
         r1 = requests.post(url, headers=headers, json=json_saida)
         r2 = requests.post(url, headers=headers, json=json_entrada)
-
         if r1.ok and r2.ok:
             st.success("✅ JSONs enviados com sucesso!")
         else:
