@@ -285,7 +285,7 @@ elif pagina == "Executar Conversão com Estoque":
                 continue
 
             filtro = df_estoque[
-                (df_estoque[col_merc] == cod_caixa) & 
+                (df_estoque[col_merc] == cod_caixa) &
                 (df_estoque[col_lote] == lote)
             ]
 
@@ -325,24 +325,32 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
+            # Corrigido: distribuição exata dos valores proporcionalmente e soma = 1.00
             total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
             itens_processados = []
-            for i in itens_entrada:
-                proporcional = float(i["QTPROD"]) / total_qtd
-                valor_item = round(proporcional, 6)
+            acumulado = 0
+
+            for i, item in enumerate(itens_entrada):
+                proporcional = float(item["QTPROD"]) / total_qtd
+                if i < len(itens_entrada) - 1:
+                    valor_item = round(proporcional, 4)
+                    acumulado += valor_item
+                else:
+                    valor_item = round(1.00 - acumulado, 4)
+
                 itens_processados.append({
-                    "NUMSEQ": i["NUMSEQ"],
-                    "CODPROD": i["CODPROD"],
-                    "QTPROD": i["QTPROD"],
+                    "NUMSEQ": item["NUMSEQ"],
+                    "CODPROD": item["CODPROD"],
+                    "QTPROD": item["QTPROD"],
                     "VLTOTPROD": str(valor_item),
-                    "NUMSEQ_DEV": i["NUMSEQ"]
+                    "NUMSEQ_DEV": item["NUMSEQ"]
                 })
 
             json_entrada = {
                 "CORPEM_ERP_DOC_ENT": {
                     "CGCCLIWMS": CNPJ_DESTINO,
                     "CGCREM": CNPJ_DESTINO,
-                    "OBSRESDP": "CONVERSÃO/AJUSTE",
+                    "OBSRESDP": "",
                     "TPDESTNF": "",
                     "DEV": "0",
                     "NUMNF": "000000001",
