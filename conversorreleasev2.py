@@ -332,24 +332,22 @@ elif pagina == "Executar Conversão com Estoque":
                 }
             }
 
-            # Corrigido: distribuição exata dos valores proporcionalmente e soma = 1.00
-            total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
+            # DISTRIBUIÇÃO IGUAL ENTRE OS ITENS
+            valor_total_nf = 5.00
+            n_itens = len(itens_entrada)
+            valor_unit = round(valor_total_nf / n_itens, 2) if n_itens else 0
+            valores = [valor_unit] * n_itens
+            soma = round(sum(valores), 2)
+            if n_itens > 0:
+                valores[-1] += round(valor_total_nf - soma, 2)
+
             itens_processados = []
-            acumulado = 0
-
             for i, item in enumerate(itens_entrada):
-                proporcional = float(item["QTPROD"]) / total_qtd
-                if i < len(itens_entrada) - 1:
-                    valor_item = round(proporcional, 4)
-                    acumulado += valor_item
-                else:
-                    valor_item = round(5.00 - acumulado, 4)
-
                 itens_processados.append({
                     "NUMSEQ": item["NUMSEQ"],
                     "CODPROD": item["CODPROD"],
                     "QTPROD": item["QTPROD"],
-                    "VLTOTPROD": str(valor_item),
+                    "VLTOTPROD": f"{valores[i]:.2f}".replace(".", ","),
                     "NUMSEQ_DEV": item["NUMSEQ"]
                 })
 
@@ -363,7 +361,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "NUMNF": "000000001",
                     "SERIENF": "1",
                     "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
-                    "VLTOTALNF": "5.00",
+                    "VLTOTALNF": "5,00",
                     "NUMEPEDCLI": numero_pedido,
                     "CHAVENF": gerar_chave_nfe(),
                     "ITENS": itens_processados
@@ -373,7 +371,7 @@ elif pagina == "Executar Conversão com Estoque":
             st.session_state["json_saida"] = json_saida
             st.session_state["json_entrada"] = json_entrada
 
-    # EXIBIR RESUMO + BOTÃO DE ENVIO
+    # EXIBIÇÃO + ENVIO
     if "json_saida" in st.session_state and "json_entrada" in st.session_state:
         json_saida = st.session_state["json_saida"]
         json_entrada = st.session_state["json_entrada"]
@@ -384,8 +382,7 @@ elif pagina == "Executar Conversão com Estoque":
 
         st.subheader("📥 Resumo - JSON de Entrada")
         for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
-            st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
-            st.code(json.dumps(json_entrada, indent=4, ensure_ascii=False), language="json")
+            st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}` | **Valor:** {item['VLTOTPROD']}")
 
         if st.button("📤 Enviar JSONs para CORPEM"):
             url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
