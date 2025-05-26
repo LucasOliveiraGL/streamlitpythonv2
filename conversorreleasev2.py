@@ -84,23 +84,20 @@ def gerar_json_saida(codprod, qtde, lote):
 
 def gerar_json_entrada(itens_entrada):
     valor_total_nf = 5.00
-    total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
+    num_itens = len(itens_entrada)
+
+    if num_itens == 0:
+        return None  # ou lançar erro se necessário
+
+    valor_unitario = round(valor_total_nf / num_itens, 2)
+    valores = [valor_unitario] * num_itens
+
+    # Corrige a última linha para fechar exatamente R$ 5,00
+    soma = round(sum(valores), 2)
+    diferenca = round(valor_total_nf - soma, 2)
+    valores[-1] += diferenca
+
     itens_processados = []
-
-    # 1. Calcula valores brutos e arredonda para duas casas
-    valores = []
-    acumulado = 0
-    for i, item in enumerate(itens_entrada):
-        proporcional = float(item["QTPROD"]) / total_qtd
-        valor_bruto = round(proporcional * valor_total_nf, 2)
-        valores.append(valor_bruto)
-        acumulado += valor_bruto
-
-    # 2. Corrige diferença (para garantir que soma seja exatamente 5.00)
-    diferenca = round(valor_total_nf - acumulado, 2)
-    valores[-1] = round(valores[-1] + diferenca, 2)
-
-    # 3. Monta os itens finais
     for i, item in enumerate(itens_entrada):
         itens_processados.append({
             "NUMSEQ": item["NUMSEQ"],
