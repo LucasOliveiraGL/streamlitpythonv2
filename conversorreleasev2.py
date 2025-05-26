@@ -355,7 +355,7 @@ elif pagina == "Executar Conversão com Estoque":
                 "CORPEM_ERP_DOC_ENT": {
                     "CGCCLIWMS": CNPJ_DESTINO,
                     "CGCREM": CNPJ_DESTINO,
-                    "OBSRESDP": "",
+                    "OBSRESDP": numero_pedido,
                     "TPDESTNF": "",
                     "DEV": "0",
                     "NUMNF": "000000001",
