@@ -381,4 +381,4 @@ elif pagina == "Executar Conversão com Estoque":
             #st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
 
             if r1.ok and r2.ok:
-                st.success("✅ JSONs enviados com sucesso!")
+                st.success("✅ JSONs enviados com sucesso! Numero do pedido gerado: "numero_pedido)
