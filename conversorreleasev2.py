@@ -346,7 +346,7 @@ elif pagina == "Executar Conversão com Estoque":
                     valor_item = round(proporcional, 4)
                     acumulado += valor_item
                 else:
-                    valor_item = round(1.00 - acumulado, 4)
+                    valor_item = round(5.00 - acumulado, 4)
 
                 itens_processados.append({
                     "NUMSEQ": item["NUMSEQ"],
@@ -366,7 +366,7 @@ elif pagina == "Executar Conversão com Estoque":
                     "NUMNF": "000000001",
                     "SERIENF": "1",
                     "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
-                    "VLTOTALNF": "1.00",
+                    "VLTOTALNF": "5.00",
                     "NUMEPEDCLI": numero_pedido,
                     "CHAVENF": gerar_chave_nfe(),
                     "ITENS": itens_processados
