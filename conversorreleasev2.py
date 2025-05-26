@@ -384,7 +384,7 @@ elif pagina == "Executar Conversão com Estoque":
 
         st.subheader("📥 Resumo - JSON de Entrada")
         for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
-            st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}` | **Valor:** {item['VLTOTPROD']}")
+            st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']} | **Valor:** {item['VLTOTPROD']}")
 
         if st.button("📤 Enviar JSONs para CORPEM"):
             url = "http://webcorpem.no-ip.info:800/scripts/mh.dll/wc"
