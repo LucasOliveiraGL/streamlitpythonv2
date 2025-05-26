@@ -86,31 +86,31 @@ def gerar_json_entrada(itens_entrada):
     valor_total_nf = 5.00
     total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
     itens_processados = []
-    valores_parciais = []
-    acumulado = 0
 
-    # Calcular os valores parciais com 4 casas decimais
+    # 1. Calcula valores brutos e arredonda para duas casas
+    valores = []
+    acumulado = 0
     for i, item in enumerate(itens_entrada):
         proporcional = float(item["QTPROD"]) / total_qtd
-        valor_item = round(proporcional * valor_total_nf, 4)
-        valores_parciais.append(valor_item)
-        acumulado += valor_item
+        valor_bruto = round(proporcional * valor_total_nf, 2)
+        valores.append(valor_bruto)
+        acumulado += valor_bruto
 
-    # Corrigir a diferença para garantir soma exata de 5.00
-    diferenca = round(valor_total_nf - acumulado, 4)
-    valores_parciais[-1] = round(valores_parciais[-1] + diferenca, 4)
+    # 2. Corrige diferença (para garantir que soma seja exatamente 5.00)
+    diferenca = round(valor_total_nf - acumulado, 2)
+    valores[-1] = round(valores[-1] + diferenca, 2)
 
-    # Montar a lista final de itens com valores corrigidos
+    # 3. Monta os itens finais
     for i, item in enumerate(itens_entrada):
         itens_processados.append({
             "NUMSEQ": item["NUMSEQ"],
             "CODPROD": item["CODPROD"],
             "QTPROD": item["QTPROD"],
-            "VLTOTPROD": f"{valores_parciais[i]:.2f}".replace(".", ","),
+            "VLTOTPROD": f"{valores[i]:.2f}".replace(".", ","),
             "NUMSEQ_DEV": item["NUMSEQ"]
         })
 
-    json_entrada = {
+    return {
         "CORPEM_ERP_DOC_ENT": {
             "CGCCLIWMS": CNPJ_DESTINO,
             "CGCREM": CNPJ_DESTINO,
