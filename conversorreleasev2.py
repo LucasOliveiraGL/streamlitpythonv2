@@ -83,17 +83,25 @@ def gerar_json_saida(codprod, qtde, lote):
     }
 
 def gerar_json_entrada(itens):
-    total_qtd = sum([float(i["QTPROD"]) for i in itens])
+    total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
     itens_processados = []
-    for i in itens:
-        proporcional = (float(i["QTPROD"]) / total_qtd)
-        valor_item = round(proporcional, 4)
+    acumulado = 0
+    
+    for i, item in enumerate(itens_entrada):
+        proporcional = float(item["QTPROD"]) / total_qtd
+        if i < len(itens_entrada) - 1:
+            valor_item = round(proporcional, 4)
+            acumulado += valor_item
+        else:
+            # Último item recebe o complemento para totalizar 1.00
+            valor_item = round(1.00 - acumulado, 4)
+
         itens_processados.append({
-            "NUMSEQ": i["NUMSEQ"],
-            "CODPROD": i["CODPROD"],
-            "QTPROD": i["QTPROD"],
+            "NUMSEQ": item["NUMSEQ"],
+            "CODPROD": item["CODPROD"],
+            "QTPROD": item["QTPROD"],
             "VLTOTPROD": str(valor_item),
-            "NUMSEQ_DEV": i["NUMSEQ"]
+            "NUMSEQ_DEV": item["NUMSEQ"]
         })
     return {
         "CORPEM_ERP_DOC_ENT": {
