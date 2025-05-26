@@ -389,11 +389,8 @@ elif pagina == "Executar Conversão com Estoque":
         for item in json_entrada["CORPEM_ERP_DOC_ENT"]["ITENS"]:
             st.markdown(f"- **Produto:** `{item['CODPROD']}` | **Qtd:** {item['QTPROD']}")
 
-            st.subheader("🧪 Debug - JSON Completo de Saída")
-            st.json(json_saida)
-            
-            st.subheader("🧪 Debug - JSON Completo de Entrada")
-            st.json(json_entrada)
+            st.code(json.dumps(json_saida, indent=4, ensure_ascii=False), language="json")
+            st.code(json.dumps(json_entrada, indent=4, ensure_ascii=False), language="json")
 
         
         if st.button("📤 Enviar JSONs para CORPEM"):
@@ -402,8 +399,8 @@ elif pagina == "Executar Conversão com Estoque":
             r1 = requests.post(url, headers=headers, json=json_saida)
             r2 = requests.post(url, headers=headers, json=json_entrada)
 
-            #st.subheader("🔍 Resposta da API")
-            #st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
+            st.subheader("🔍 Resposta da API")
+            st.code(f"Saída: {r1.status_code} - {r1.text}\nEntrada: {r2.status_code} - {r2.text}")
 
             if r1.ok and r2.ok:
                 st.success("✅ JSONs enviados com sucesso!")
