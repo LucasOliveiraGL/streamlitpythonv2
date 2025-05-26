@@ -85,35 +85,42 @@ def gerar_json_saida(codprod, qtde, lote):
 def gerar_json_entrada(itens):
     total_qtd = sum([float(i["QTPROD"]) for i in itens_entrada])
     itens_processados = []
+    valores_parciais = []
     acumulado = 0
-    
+
+# Primeiro, calcular os valores parciais com 4 casas e acumular o total parcial
     for i, item in enumerate(itens_entrada):
         proporcional = float(item["QTPROD"]) / total_qtd
-        if i < len(itens_entrada) - 1:
-            valor_item = round(proporcional, 4)
-            acumulado += valor_item
-        else:
-            # Último item recebe o complemento para totalizar 1.00
-            valor_item = round(1.00 - acumulado, 4)
+        valor_item = round(proporcional, 4)
+        valores_parciais.append(valor_item)
+        acumulado += valor_item
 
+# Ajuste final para garantir soma total = 1.00 (R$)
+    diferenca = round(1.00 - acumulado, 4)
+    valores_parciais[-1] = round(valores_parciais[-1] + diferenca, 4)
+
+# Monta os itens com valor final ajustado
+    for i, item in enumerate(itens_entrada):
         itens_processados.append({
             "NUMSEQ": item["NUMSEQ"],
             "CODPROD": item["CODPROD"],
             "QTPROD": item["QTPROD"],
-            "VLTOTPROD": str(valor_item),
+            "VLTOTPROD": str(valores_parciais[i]).replace(".", ","),
             "NUMSEQ_DEV": item["NUMSEQ"]
         })
-    return {
+
+    json_entrada = {
         "CORPEM_ERP_DOC_ENT": {
             "CGCCLIWMS": CNPJ_DESTINO,
             "CGCREM": CNPJ_DESTINO,
             "OBSRESDP": "",
             "TPDESTNF": "",
+            "DEV": "0",
             "NUMNF": "000000001",
             "SERIENF": "1",
             "DTEMINF": datetime.now().strftime("%d/%m/%Y"),
-            "VLTOTALNF": "1.00",
-            "NUMEPEDCLI": gerar_numped(),
+            "VLTOTALNF": "1,00",
+            "NUMEPEDCLI": numero_pedido,
             "CHAVENF": gerar_chave_nfe(),
             "ITENS": itens_processados
         }
