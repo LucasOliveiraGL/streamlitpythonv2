@@ -66,7 +66,7 @@ def gerar_json_saida(codprod, qtde, lote):
         "CORPEM_ERP_DOC_SAI": {
             "CGCCLIWMS": CNPJ_DESTINO,
             "CGCEMINF": CNPJ_DESTINO,
-            "OBSPED": "CONVERSÃO",
+            "OBSPED": "CONVERSAO",
             "OBSROM": "",
             "NUMPEDCLI": gerar_numped(),
             "VLTOTPED": "1,00",
@@ -111,7 +111,7 @@ def gerar_json_entrada(itens_entrada):
         "CORPEM_ERP_DOC_ENT": {
             "CGCCLIWMS": CNPJ_DESTINO,
             "CGCREM": CNPJ_DESTINO,
-            "OBSRESDP": "CONVERSÃO",
+            "OBSRESDP": "CONVERSAO",
             "TPDESTNF": "",
             "DEV": "0",
             "NUMNF": "000000001",
@@ -324,7 +324,7 @@ elif pagina == "Executar Conversão com Estoque":
                 "CORPEM_ERP_DOC_SAI": {
                     "CGCCLIWMS": CNPJ_DESTINO,
                     "CGCEMINF": CNPJ_DESTINO,
-                    "OBSPED": "CONVERSÃO",
+                    "OBSPED": "CONVERSAO",
                     "OBSROM": "",
                     "NUMPEDCLI": numero_pedido,
                     "VLTOTPED": "1,00",
@@ -357,7 +357,7 @@ elif pagina == "Executar Conversão com Estoque":
                 "CORPEM_ERP_DOC_ENT": {
                     "CGCCLIWMS": CNPJ_DESTINO,
                     "CGCREM": CNPJ_DESTINO,
-                    "OBSRESDP": "CONVERSÃO",
+                    "OBSRESDP": "CONVERSAO",
                     "TPDESTNF": "",
                     "DEV": "0",
                     "NUMNF": "000000001",
