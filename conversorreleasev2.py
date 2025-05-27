@@ -66,7 +66,7 @@ def gerar_json_saida(codprod, qtde, lote):
         "CORPEM_ERP_DOC_SAI": {
             "CGCCLIWMS": CNPJ_DESTINO,
             "CGCEMINF": CNPJ_DESTINO,
-            "OBSPED": "",
+            "OBSPED": "CONVERSÃO",
             "OBSROM": "",
             "NUMPEDCLI": gerar_numped(),
             "VLTOTPED": "1,00",
